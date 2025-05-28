@@ -35,11 +35,13 @@ exports.uploadMarklist = async (req, res) => {
 
       await db.query(
         `INSERT INTO marklist 
-         (Name, Sex, Tigrigna, Amharic, English, Maths, Biology, Chemistry, Physics, Geography, History, Economics, Citizenship, ICT, HPE, Total, Average, Flag)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (Name, Sex,Term,Year,Tigrigna, Amharic, English, Maths, Biology, Chemistry, Physics, Geography, History, Economics, Citizenship, ICT, HPE, Total, Average, Flag)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           row.Name,
           row.Sex,
+          row.Term,
+          row.Year,
           ...subjects,
           total,
           average,
@@ -97,7 +99,7 @@ exports.deleteMarklist = async (req, res) => {
 exports.updateMarklist = async (req, res) => {
   const { id } = req.params;
   const {
-    Name, Sex, Tigrigna, Amharic, English, Maths, Biology,
+    Name, Sex, Term, Year, Tigrigna, Amharic, English, Maths, Biology,
     Chemistry, Physics, Geography, History, Economics,
     Citizenship, ICT, HPE
   } = req.body;
@@ -130,10 +132,10 @@ exports.updateMarklist = async (req, res) => {
 
     await db.query(
       `UPDATE marklist 
-       SET Name=?, Sex=?, Tigrigna=?, Amharic=?, English=?, Maths=?, Biology=?, Chemistry=?, Physics=?, Geography=?, History=?, Economics=?, Citizenship=?, ICT=?, HPE=?, Total=?, Average=?, Flag=? 
+       SET Name=?, Sex=?, Term=?, Year=?, Tigrigna=?, Amharic=?, English=?, Maths=?, Biology=?, Chemistry=?, Physics=?, Geography=?, History=?, Economics=?, Citizenship=?, ICT=?, HPE=?, Total=?, Average=?, Flag=? 
        WHERE id=?`,
       [
-        Name, Sex, ...subjects, total, average, flag, id
+        Name, Sex,Term,Year, ...subjects, total, average, flag, id
       ]
     );
 
