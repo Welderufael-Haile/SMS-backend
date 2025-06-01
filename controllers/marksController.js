@@ -1,62 +1,117 @@
-// controllers/marksController.js
 const db = require('../config/db');
 
-// Get all marks with related data
-exports.getAllMarks = async (req, res) => {
+exports.getMarks = async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      SELECT m.id, s.Full_Name, sub.name AS subject_name, m.score,
-             t.name AS term_name, ay.year AS academic_year
+    const { search } = req.query;
+
+    let sql = `
+      SELECT 
+        m.id, 
+        m.score, 
+        s.id AS subject_id, 
+        s.name AS subjects_name,
+        e.id AS enrollment_id,
+        st.id AS student_id, 
+        st.full_name AS student_name,
+        ay.year_name AS academic_year,
+        t.term_name AS term,
+        sec.name AS section_name
       FROM marks m
-      JOIN enrollments e ON m.enrollment_id = e.id
-      JOIN Student1 s ON e.student_id = s.id
-      JOIN subjects sub ON m.subject_id = sub.id
-      JOIN terms t ON e.term_id = t.id
+      JOIN subjects s ON m.subjects_id = s.id
+      JOIN enrollments e ON m.enrollments_id = e.id
+      JOIN student st ON e.student_id = st.id
       JOIN academic_year ay ON e.academic_year_id = ay.id
-    `);
-    res.json(rows);
+      JOIN terms t ON e.terms_id = t.id
+      JOIN sections sec ON e.sections_id = sec.id
+    `;
+
+    const params = [];
+
+    if (search) {
+      sql += ` WHERE st.full_name LIKE ? OR s.name LIKE ? OR ay.year_name LIKE ? OR t.term_name LIKE ?`;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    sql += ` ORDER BY ay.year_name, t.term_name, st.full_name, s.name`;
+
+    const [results] = await db.execute(sql, params);
+    res.json(results);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch marks.' });
+    console.error('Error fetching marks:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Add a new mark
-exports.addMark = async (req, res) => {
-  const { enrollment_id, subject_id, score } = req.body;
+exports.createMark = async (req, res) => {
   try {
-    const [result] = await db.query(
-      'INSERT INTO marks (enrollment_id, subject_id, score) VALUES (?, ?, ?)',
+    const { enrollment_id, subject_id, score } = req.body;
+    
+    const [result] = await db.execute(
+      `INSERT INTO marks (enrollments_id, subjects_id, score) VALUES (?, ?, ?)`,
       [enrollment_id, subject_id, score]
     );
-    res.status(201).json({ message: 'Mark added successfully.', id: result.insertId });
+    
+    res.status(201).json({ 
+      id: result.insertId, 
+      enrollment_id, 
+      subject_id, 
+      score 
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to add mark.' });
+    console.error('Error creating mark:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Update a mark
 exports.updateMark = async (req, res) => {
-  const { id } = req.params;
-  const { score } = req.body;
   try {
-    await db.query('UPDATE marks SET score = ? WHERE id = ?', [score, id]);
-    res.json({ message: 'Mark updated successfully.' });
+    const { id } = req.params;
+    const { enrollment_id, subject_id, score } = req.body;
+
+    await db.execute(
+      `UPDATE marks SET enrollments_id = ?, subjects_id = ?, score = ? WHERE id = ?`,
+      [enrollment_id, subject_id, score, id]
+    );
+    
+    res.json({ message: 'Mark updated successfully' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update mark.' });
+    console.error('Error updating mark:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Delete a mark
 exports.deleteMark = async (req, res) => {
-  const { id } = req.params;
   try {
-    await db.query('DELETE FROM marks WHERE id = ?', [id]);
-    res.json({ message: 'Mark deleted successfully.' });
+    const { id } = req.params;
+    await db.execute(`DELETE FROM marks WHERE id = ?`, [id]);
+    res.json({ message: 'Mark deleted successfully' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to delete mark.' });
+    console.error('Error deleting mark:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getDropdowns = async (req, res) => {
+  try {
+    const [enrollments] = await db.execute(`
+      SELECT 
+        e.id, 
+        st.full_name AS student_name, 
+        s.name AS section_name,
+        ay.year_name, 
+        t.term_name
+      FROM enrollments e
+      JOIN student st ON e.student_id = st.id
+      JOIN sections s ON e.sections_id = s.id
+      JOIN academic_year ay ON e.academic_year_id = ay.id
+      JOIN terms t ON e.terms_id = t.id
+    `);
+
+    const [subjects] = await db.execute(`SELECT id, name FROM subjects`);
+
+    res.json({ enrollments, subjects });
+  } catch (error) {
+    console.error("Error fetching dropdowns:", error);
+    res.status(500).json({ message: "Server error while fetching dropdowns" });
   }
 };

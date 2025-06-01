@@ -1,11 +1,17 @@
-// routes/marksRoutes.js
 const express = require('express');
 const router = express.Router();
-const marksController = require('../controllers/marksController');
+const {
+  getMarks,
+  createMark,
+  updateMark,
+  deleteMark,
+  getDropdowns
+} = require('../controllers/marksController');
 
-router.get('/', marksController.getAllMarks);
-router.post('/', marksController.addMark);
-router.put('/:id', marksController.updateMark);
-router.delete('/:id', marksController.deleteMark);
+router.get('/', getMarks);
+router.post('/', createMark);
+router.put('/:id', updateMark);
+router.delete('/:id', deleteMark);
+router.get('/dropdowns', getDropdowns);
 
 module.exports = router;

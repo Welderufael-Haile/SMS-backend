@@ -62,15 +62,14 @@
 // const PORT = process.env.PORT || 5000;
 // app.listen(PORT, () => {
 
-
- require("dotenv").config();
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const bodyParser = require("body-parser");
 const db = require("./config/db");
 
- const teacherRoutes = require('./routes/teacherRoutes') // import teachers route
+ const teacherRoutes = require('./routes/teacherRoutes'); //for new teacher route
  const newstudentRoutes = require("./routes/newstudentRoutes"); // ✅ Import students routes
  const announcementsRoutes = require("./routes/announcementRoutes"); // import announcement route
  const jobPostRoutes = require("./routes/jobPostRoutes");
@@ -84,9 +83,9 @@ const db = require("./config/db");
  const termRoutes = require('./routes/termRoutes'); // ✅ Import the router
  const classesRoutes = require('./routes/classesRoutes');
  const academicYearRoutes = require('./routes/academicYearRoutes');
- const marksRoutes = require("./routes/marksRoutes");
-
-const app = express();
+ const enrollmentRoutes = require('./routes/enrollmentRoutes');
+ const marksRoutes = require('./routes/marksRoutes');
+ const app = express();
 
 // Middleware
 app.use(cors());
@@ -106,7 +105,7 @@ const { createMarksTable} = require('./models/marksTable');
 const {createJobsTable} = require('./models/jobsTable');
 const {createContactsTable} = require('./models/contactsTable');
 const {createMarklistTable} = require('./models/marklistTable')
-
+const {createTeachesTable} = require('./models/teacherTable')
 async function initializeDatabase() {
   try {
     // Test connection
@@ -126,6 +125,7 @@ async function initializeDatabase() {
     await createJobsTable();
     await createMarklistTable();
     await createContactsTable();
+    await createTeachesTable();
     // Add other table creation function calls here as needed
     console.log("🛠️  Database tables ready");
   } catch (error) {
@@ -138,11 +138,11 @@ async function startServer() {
   try {
     await initializeDatabase();
     
-    // Setup routes
+  // Setup routes
   // Routes for students
  app.use("/api/students", newstudentRoutes); // ✅ Use routes
- //routes for teachers
- app.use("/api/teachers", teacherRoutes); // ✅ Use routes
+ // new teachers
+ app.use("/api/teacher", teacherRoutes);
  //routes for announcements
  app.use("/api/announcements", announcementsRoutes); // ✅ This should be a function, not an object
  //routes for jobposts
@@ -169,11 +169,11 @@ async function startServer() {
   // Routes for terms
  app.use('/api/terms', termRoutes);
  // routes for enrollment
+ app.use("/api/enrollments", enrollmentRoutes);
  //routes for marks 
- app.use('./api/marks', marksRoutes)
+ app.use('/api/marks', marksRoutes)
  // ✅ Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
