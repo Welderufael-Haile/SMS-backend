@@ -10,8 +10,7 @@ exports.createTeacher = async (req, res) => {
     email,
     gender,
     phone_number,
-    subject,
-    grade_level,
+    Subject,
     address,
   } = req.body;
 
@@ -29,8 +28,7 @@ exports.createTeacher = async (req, res) => {
       email,
       gender,
       phone_number,
-      subject,
-      grade_level,
+      Subject,
       address,
       profile_photo,
       degree_certificate,
@@ -70,6 +68,7 @@ exports.getTeacherById = async (req, res) => {
 };
 
 // UPDATE teacher
+// UPDATE teacher
 exports.updateTeacher = async (req, res) => {
   const { id } = req.params;
   const {
@@ -77,8 +76,7 @@ exports.updateTeacher = async (req, res) => {
     email,
     gender,
     phone_number,
-    subject,
-    grade_level,
+    Subject,
     address,
   } = req.body;
 
@@ -92,6 +90,22 @@ exports.updateTeacher = async (req, res) => {
     }
 
     const teacher = existing[0];
+
+    // Delete old profile photo if a new one is being uploaded
+    if (profile_photo && teacher.profile_photo) {
+      const oldPhotoPath = path.join(__dirname, "..", "uploads", teacher.profile_photo);
+      if (fs.existsSync(oldPhotoPath)) {
+        fs.unlinkSync(oldPhotoPath);
+      }
+    }
+
+    // Delete old degree certificate if a new one is being uploaded
+    if (degree_certificate && teacher.degree_certificate) {
+      const oldCertPath = path.join(__dirname, "..", "uploads", teacher.degree_certificate);
+      if (fs.existsSync(oldCertPath)) {
+        fs.unlinkSync(oldCertPath);
+      }
+    }
 
     const updatedPhoto = profile_photo || teacher.profile_photo;
     const updatedDegree = degree_certificate || teacher.degree_certificate;
@@ -107,8 +121,7 @@ exports.updateTeacher = async (req, res) => {
       email,
       gender,
       phone_number,
-      subject,
-      grade_level,
+      Subject,
       address,
       updatedPhoto,
       updatedDegree,
@@ -121,7 +134,6 @@ exports.updateTeacher = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 // DELETE teacher
 exports.deleteTeacher = async (req, res) => {
   const { id } = req.params;
@@ -134,16 +146,25 @@ exports.deleteTeacher = async (req, res) => {
 
     const teacher = existing[0];
 
-    // Optionally delete files
+    // Delete profile photo if exists
     if (teacher.profile_photo) {
-      fs.unlink(path.join("uploads", teacher.profile_photo), () => {});
+      const photoPath = path.join(__dirname, "..", "uploads", teacher.profile_photo);
+      if (fs.existsSync(photoPath)) {
+        fs.unlinkSync(photoPath);
+      }
     }
 
+    // Delete degree certificate if exists
     if (teacher.degree_certificate) {
-      fs.unlink(path.join("uploads", teacher.degree_certificate), () => {});
+      const certPath = path.join(__dirname, "..", "uploads", teacher.degree_certificate);
+      if (fs.existsSync(certPath)) {
+        fs.unlinkSync(certPath);
+      }
     }
 
+    // Delete teacher from DB
     await db.query("DELETE FROM teachers WHERE id = ?", [id]);
+
     res.json({ message: "Teacher deleted successfully" });
   } catch (err) {
     console.error("Error deleting teacher:", err);

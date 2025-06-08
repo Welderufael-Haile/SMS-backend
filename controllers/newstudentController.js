@@ -1,7 +1,8 @@
-const fs = require('fs');
-const path = require('path');
+
 const pool = require("../config/db");
-//const { upload } = require("../server");
+const path = require("path");
+const fs = require("fs");
+const db = require("../config/db"); // adjust if your DB connection file path differs
 
 // 📌 Register Student (with profile_photo & grade_certificate)
 exports.registerStudent = async (req, res) => {
@@ -33,54 +34,58 @@ exports.getStudents = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch students" });
   }
 };
-// 📌 Update Student (with profile_photo & grade_certificate)
+
+// update student
 exports.updateStudent = async (req, res) => {
+  const { id } = req.params;
+  const { full_name, gender, email, phone_number, grade_level } = req.body;
+
+  const profile_photo = req.files?.profile_photo?.[0]?.filename;
+  const grade_certificate = req.files?.grade_certificate?.[0]?.filename;
+
   try {
-    const { id } = req.params;
-    const { full_name, gender, email, phone_number, grade_level } = req.body;
-
-    // Check if files are uploaded
-    const profile_photo = req.files?.profile_photo ? req.files.profile_photo[0].filename : null;
-    const grade_certificate = req.files?.grade_certificate ? req.files.grade_certificate[0].filename : null;
-
-    // First, get the student data to retrieve old file paths
-    const [student] = await pool.execute("SELECT * FROM students WHERE id=?", [id]);
-
-    if (student.length === 0) {
+    const [existing] = await db.query("SELECT * FROM students WHERE id = ?", [id]);
+    if (existing.length === 0) {
       return res.status(404).json({ error: "Student not found" });
     }
 
-    // If new profile photo is uploaded, delete the old file
-    if (profile_photo && student[0].profile_photo) {
-      const oldProfilePhotoPath = path.join(__dirname, "uploads", student[0].profile_photo);
-      fs.unlinkSync(oldProfilePhotoPath);  // Delete old profile photo
+    const student = existing[0];
+
+    // Delete old files if new ones are uploaded
+    if (profile_photo && student.profile_photo) {
+      const oldPhotoPath = path.join(__dirname, "..", "uploads", student.profile_photo);
+      if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath);
     }
 
-    // If new grade certificate is uploaded, delete the old file
-    if (grade_certificate && student[0].grade_certificate) {
-      const oldGradeCertificatePath = path.join(__dirname, "uploads", student[0].grade_certificate);
-      fs.unlinkSync(oldGradeCertificatePath);  // Delete old grade certificate
+    if (grade_certificate && student.grade_certificate) {
+      const oldCertPath = path.join(__dirname, "..", "uploads", student.grade_certificate);
+      if (fs.existsSync(oldCertPath)) fs.unlinkSync(oldCertPath);
     }
 
-    // Update student details in the database, including file paths if available
-    await pool.execute(
-      "UPDATE students SET full_name=?, gender=?, email=?, phone_number=?, grade_level=?, profile_photo=?, grade_certificate=? WHERE id=?",
-      [
-        full_name,
-        gender,
-        email,
-        phone_number,
-        grade_level,
-        profile_photo || student[0].profile_photo,  // Retain old file if no new file uploaded
-        grade_certificate || student[0].grade_certificate,  // Retain old file if no new file uploaded
-        id
-      ]
-    );
+    const updatedPhoto = profile_photo || student.profile_photo;
+    const updatedDegree = grade_certificate || student.grade_certificate;
+
+    const sql = `
+      UPDATE students
+      SET full_name=?, gender=?, email=?, phone_number=?, grade_level=?, profile_photo=?, grade_certificate=?
+      WHERE id = ?
+    `;
+
+    await db.query(sql, [
+      full_name,
+      gender,
+      email,
+      phone_number,
+      grade_level,
+      updatedPhoto,
+      updatedDegree,
+      id,
+    ]);
 
     res.json({ message: "Student updated successfully" });
-  } catch (error) {
-    console.error("Error updating student:", error);
-    res.status(500).json({ error: "Failed to update student" });
+  } catch (err) {
+    console.error("Error updating student:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
