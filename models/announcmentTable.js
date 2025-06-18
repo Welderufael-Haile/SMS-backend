@@ -25,7 +25,7 @@ try{
     console.log("✅  announcement table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating announcements table:", error);
     throw error;
   }
  

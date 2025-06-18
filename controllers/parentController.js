@@ -12,10 +12,10 @@ exports.getAllParents = async (req, res) => {
 };
 // Add a new parent
 exports.addParent = (req, res) => {
-    const { First_Name, Last_Name, Phone_Number, Email } = req.body;
-    const sql = 'INSERT INTO Parent (First_Name, Last_Name, Phone_Number, Email) VALUES (?, ?, ?, ?)';
+    const { First_Name, Last_Name, Sex, Phone_Number, Email, Address } = req.body;
+    const sql = 'INSERT INTO Parent (First_Name, Last_Name, Sex, Phone_Number, Email, Address ) VALUES (?, ?, ?, ?, ?, ?)';
     
-    db.query(sql, [First_Name, Last_Name, Phone_Number, Email], (err, result) => {
+    db.query(sql, [First_Name, Last_Name, Sex, Phone_Number, Email, Address], (err, result) => {
         if (err) return res.status(500).json({ message: 'Error adding parent', error: err });
         res.json({ message: 'Parent added successfully', parentId: result.insertId });
     });
@@ -24,10 +24,10 @@ exports.addParent = (req, res) => {
 // Update parent
 exports.updateParent = (req, res) => {
     const { ParentID } = req.params;
-    const { First_Name, Last_Name, Phone_Number, Email } = req.body;
+    const { First_Name, Last_Name, Sex, Phone_Number, Email, Address } = req.body;
 
-    const sql = 'UPDATE Parent SET First_Name=?, Last_Name=?, Phone_Number=?, Email=? WHERE ParentID=?';
-    db.query(sql, [First_Name, Last_Name, Phone_Number, Email, ParentID], (err) => {
+    const sql = 'UPDATE Parent SET First_Name=?, Last_Name=?, Sex=?, Phone_Number=?, Email=?, Address=? WHERE ParentID=?';
+    db.query(sql, [First_Name, Last_Name, Sex, Phone_Number, Email, Address, ParentID], (err) => {
         if (err) return res.status(500).json({ message: 'Error updating parent', error: err });
         res.json({ message: 'Parent updated successfully' });
     });

@@ -17,7 +17,7 @@ try{
     console.log("✅  marks table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating Marks table:", error);
     throw error;
   }
 }

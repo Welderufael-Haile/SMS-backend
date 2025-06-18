@@ -1,17 +1,3 @@
-// const db = require("../config/db");
-
-// const addSection = async (req, res) => {
-//   try {
-//     const { name, grade_level } = req.body;
-//     await db.query("INSERT INTO sections (name, grade_level) VALUES (?, ?)", [name, grade_level]);
-//     res.status(201).json({ message: "Section added successfully!" });
-//   } catch (error) {
-//     res.status(500).json({ error: "Error adding section" });
-//   }
-// };
-
-// module.exports = { addSection };
-
 const db = require("../config/db");
 
 // Fetch all sections

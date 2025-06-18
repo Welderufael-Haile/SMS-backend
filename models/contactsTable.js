@@ -17,7 +17,7 @@ try{
     console.log("✅  contacts table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating contacts table:", error);
     throw error;
   }
 }

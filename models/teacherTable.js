@@ -19,10 +19,10 @@ async function createTeachesTable() {
 )`;
     
     await db.query(sql);
-    console.log("✅  subjects table ready");
+    console.log("✅  teachers table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating teachers table:", error);
     throw error;
   }
 }

@@ -16,7 +16,7 @@ async function createSubjectsTable() {
     console.log("✅  subjects table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating subjects table:", error);
     throw error;
   }
 }

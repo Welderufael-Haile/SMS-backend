@@ -20,7 +20,7 @@ try{
     console.log("✅  enrollment table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating enrollments table:", error);
     throw error;
   }
  

@@ -3,6 +3,16 @@ const pool = require('../config/db');
 exports.createTerm = async (req, res) => {
   try {
     const { academic_year_id, term_name, start_date, end_date } = req.body;
+
+    // Check if the term_name already exists for the same academic_year_id
+    const [existing] = await pool.query(
+      'SELECT id FROM Terms WHERE academic_year_id = ? AND term_name = ?',
+      [academic_year_id, term_name]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'This term name already exists for the selected academic year.' });
+    }
+
     const [result] = await pool.execute(
       'INSERT INTO Terms (academic_year_id, term_name, start_date, end_date) VALUES (?, ?, ?, ?)',
       [academic_year_id, term_name, start_date, end_date]

@@ -10,6 +10,7 @@ exports.getMarks = async (req, res) => {
         m.score, 
         s.id AS subject_id, 
         s.name AS subjects_name,
+        s.grade_level AS subjects_grade_level,
         e.id AS enrollment_id,
         st.id AS student_id, 
         st.full_name AS student_name,

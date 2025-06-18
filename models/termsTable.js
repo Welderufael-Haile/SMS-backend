@@ -18,7 +18,7 @@ try{
     console.log("✅  terms table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating terms table:", error);
     throw error;
   }
  

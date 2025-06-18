@@ -36,7 +36,7 @@ try{
     console.log("✅  marklist table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating marklist table:", error);
     throw error;
   }
 }

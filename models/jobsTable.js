@@ -15,7 +15,7 @@ try{
     console.log("✅  jobs table ready");
     return true;
   } catch (error) {
-    console.error("❌ Error creating Section table:", error);
+    console.error("❌ Error creating jobs table:", error);
     throw error;
   }
  
