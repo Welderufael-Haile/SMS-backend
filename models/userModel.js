@@ -5,7 +5,7 @@ try{
 
 // create terms table
   const sql = `
-   CREATE TABLE IF NOT EXISTS Users (
+  CREATE TABLE IF NOT EXISTS Users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     full_name VARCHAR(100),
     email VARCHAR(100) UNIQUE NOT NULL,
@@ -13,6 +13,7 @@ try{
     role ENUM('admin', 'teacher', 'student') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )`;
+
     await db.query(sql);
     console.log("✅  user table ready");
     return true;

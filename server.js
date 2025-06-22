@@ -28,6 +28,8 @@ const cookieParser = require('cookie-parser');
  const resultRoutes = require('./routes/resultRoutes');
  const applicantsRoutes = require('./routes/applicantsRoutes');
  const authRoutes = require('./routes/authRoutes');
+ const teacherMarksRoutes = require('./routes/teacherMarksRoutes');
+
 
  const app = express();
 
@@ -43,11 +45,11 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Import table creation
+const { createParentTable } = require('./models/parentTable');
 const { createStudentTable } = require("./models/studentModel");
 const { createSectionsTable} = require('./models/sectionModel');
-const { createTermsTable} = require('./models/termsTable');
 const { createacademicYearTable} = require('./models/academicYearTable');
-const { createParentTable } = require('./models/parentTable');
+const { createTermsTable} = require('./models/termsTable');
 const { createSubjectsTable } = require('./models/subjectsTable');
 const { createAnnouncementTable } = require('./models/announcmentTable');
 const { createEnrollmentTable} = require('./models/enrollmentTable');
@@ -57,8 +59,9 @@ const {createContactsTable} = require('./models/contactsTable');
 const {createMarklistTable} = require('./models/marklistTable');
 const {createTeachesTable} = require('./models/teacherTable');
 const {createRsultsTable} = require('./models/resultTable');
-const {createApplicantsTable} = require('./models/jobApplicationsTable')
-const{createUserTable} = require('./models/userModel')
+const {createApplicantsTable} = require('./models/jobApplicationsTable');
+const{createUserTable} = require('./models/userModel');
+const {createTeacher_subjectsTable} = require('./models/teacher_subjectsModel')
 // initialize the database and create tables
 async function initializeDatabase() {
   try {
@@ -83,6 +86,7 @@ async function initializeDatabase() {
     await createRsultsTable();
     await createApplicantsTable();
     await createUserTable();
+    await createTeacher_subjectsTable();
    // Add other table creation function calls here as needed
     console.log("🛠️  Database tables ready");
   } catch (error) {
@@ -135,9 +139,11 @@ async function startServer() {
  // routes for applicants
  app.use('/api/applicants', applicantsRoutes);
  
-
 // routes for authentication
 app.use('/api/auth', authRoutes);
+// routes for teacherMarks
+app.use('/api/teacher/marks', teacherMarksRoutes);
+
  // ✅ Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));
     const PORT = process.env.PORT || 5000;

@@ -5,7 +5,7 @@ async function createTeachesTable() {
   try{
     // Then create section table
     const sql = `
-   CREATE TABLE IF NOT EXISTS teachers (
+  CREATE TABLE IF NOT EXISTS teachers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(100),
   email VARCHAR(100),
