@@ -6,6 +6,7 @@ const db = require("../config/db"); // adjust if your DB connection file path di
 // CREATE a new teacher
 exports.createTeacher = async (req, res) => {
   const {
+    user_id,
     full_name,
     email,
     gender,
@@ -19,11 +20,12 @@ exports.createTeacher = async (req, res) => {
 
   try {
     const sql = `
-      INSERT INTO teachers (full_name, email, gender, phone_number, Subject, address, profile_photo, degree_certificate)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO teachers (user_id, full_name, email, gender, phone_number, Subject, address, profile_photo, degree_certificate)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await db.query(sql, [
+      user_id,
       full_name,
       email,
       gender,
@@ -67,11 +69,25 @@ exports.getTeacherById = async (req, res) => {
   }
 };
 
-// UPDATE teacher
+
+// Get all users with role = 'teacher'
+exports.getTeachersUsers = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT id, full_name, email FROM Users WHERE role = 'teacher' ORDER BY full_name"
+    );
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error("Error fetching teacher users:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 // UPDATE teacher
 exports.updateTeacher = async (req, res) => {
   const { id } = req.params;
   const {
+    user_id,
     full_name,
     email,
     gender,
@@ -112,11 +128,12 @@ exports.updateTeacher = async (req, res) => {
 
     const sql = `
       UPDATE teachers
-      SET full_name = ?, email = ?, gender = ?, phone_number = ?, Subject = ?, address = ?, profile_photo = ?, degree_certificate = ?
+      SET user_id= ?, full_name = ?, email = ?, gender = ?, phone_number = ?, Subject = ?, address = ?, profile_photo = ?, degree_certificate = ?
       WHERE id = ?
     `;
 
     await db.query(sql, [
+      user_id,
       full_name,
       email,
       gender,

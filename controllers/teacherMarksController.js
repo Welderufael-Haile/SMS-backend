@@ -1,93 +1,216 @@
 // backend/controllers/teacherMarksController.js
 const pool = require('../config/db');
-// Fetch marks for subjects assigned to the teacher
-exports.getTeacherMarks = async (req, res) => {
-  const teacherId = req.user.id;
+
+// Get all marks for the logged-in teacher based on assigned subjects
+exports.getMarksByTeacherUserId = async (req, res) => {
+const userId = req.user?.id;
+if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+try {
+const [[teacher]] = await pool.query('SELECT id FROM teachers WHERE user_id = ?', [userId]);
+if (!teacher) return res.status(404).json({ error: "Teacher not found" });
+
+const teacherId = teacher.id;
+
+const [marks] = await pool.query(`
+  SELECT m.*, e.id AS enrollment_id, s.full_name AS student_name, sub.name
+  FROM marks m
+  JOIN enrollments e ON m.enrollments_id = e.id
+  JOIN students s ON e.student_id = s.id
+  JOIN subjects sub ON m.subjects_id = sub.id
+  JOIN teacher_subjects ts ON ts.subject_id = m.subjects_id
+  WHERE ts.teacher_id = ?
+`, [teacherId]);
+
+res.json(marks);
+} catch (err) {
+console.error("Error fetching teacher marks:", err);
+res.status(500).json({ error: "Internal server error" });
+}
+};
+
+// get student with marks fro teacher subjects
+exports.getStudentsWithMarks = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const [marks] = await pool.query(`
-      SELECT m.id, m.score,
-             s.full_name AS student_name,
-             sub.name AS subject_name,
-             ay.year_name AS academic_year, t.name AS term_name, sec.name AS section_name
+    // Get teacher ID
+    const [[teacher]] = await pool.query(
+      'SELECT id FROM teachers WHERE user_id = ?', 
+      [userId]
+    );
+
+    if (!teacher) {
+      return res.status(404).json({ error: "Teacher not found" });
+    }
+
+    // Get all student marks data
+    const [students] = await pool.query(`
+      SELECT 
+        s.id AS student_id,
+        s.full_name,
+        sec.name AS section_name,
+        t.term_name,
+        ay.year_name,
+        sub.name AS subject_name,
+        m.score
       FROM marks m
-      JOIN enrollments e ON m.enrollment_id = e.id
-      JOIN students s ON e.student_id = s.id
-      JOIN subjects sub ON m.subject_id = sub.id
-      JOIN teacher_subjects ts ON sub.id = ts.subject_id
+      JOIN enrollments e ON m.enrollments_id = e.id
+      JOIN Student s ON e.student_id = s.id
+      JOIN sections sec ON e.sections_id = sec.id
+      JOIN terms t ON e.terms_id = t.id
       JOIN academic_year ay ON e.academic_year_id = ay.id
-      JOIN terms t ON e.term_id = t.id
-      JOIN sections sec ON e.section_id = sec.id
+      JOIN subjects sub ON m.subjects_id = sub.id
+      JOIN teacher_subjects ts ON ts.subject_id = sub.id
       WHERE ts.teacher_id = ?
-    `, [teacherId]);
+      ORDER BY s.full_name, sub.name
+    `, [teacher.id]);
 
-    res.json(marks);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch marks' });
+    // Group data by student
+    const grouped = {};
+    students.forEach(row => {
+      if (!grouped[row.student_id]) {
+        grouped[row.student_id] = {
+          student_id: row.student_id,
+          full_name: row.full_name,
+          section: row.section_name,
+          subjects: []
+        };
+      }
+
+      grouped[row.student_id].subjects.push({
+        name: row.subject_name,
+        score: row.score,
+        term: row.term_name,
+        year: row.year_name
+      });
+    });
+
+    const result = Object.values(grouped);
+    return res.json(result);
+
+  } catch (err) {
+    console.error("Error fetching students with marks:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
-// Add mark only if subject is assigned to teacher
+// Dropdown data for teacher's assigned students and subjects
+exports.getDropdowns = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    // 1. Get teacher ID
+    const [[teacher]] = await pool.query(
+      'SELECT id FROM teachers WHERE user_id = ?', 
+      [userId]
+    );
+    if (!teacher) return res.status(404).json({ error: "Teacher not found" });
+
+    // 2. Get teacher's subjects
+    const [subjects] = await pool.query(`
+      SELECT s.id, s.name, s.grade_level 
+      FROM subjects s
+      JOIN teacher_subjects ts ON s.id = ts.subject_id
+      WHERE ts.teacher_id = ?
+    `, [teacher.id]);
+
+    // 3. Get enrollments with all related information
+    const [enrollments] = await pool.query(`
+      SELECT 
+        e.id,
+        s.full_name AS student_name,
+        sec.name AS section_name,
+        sec.grade_level,
+        t.term_name,
+        ay.year_name,
+        sub.name AS subject_name
+      FROM enrollments e
+      JOIN Student s ON e.student_id = s.id
+      JOIN sections sec ON e.sections_id = sec.id
+      JOIN terms t ON e.terms_id = t.id
+      JOIN academic_year ay ON e.academic_year_id = ay.id
+      JOIN subjects sub ON sub.grade_level = sec.grade_level
+      JOIN teacher_subjects ts ON ts.subject_id = sub.id
+      WHERE ts.teacher_id = ?
+      ORDER BY s.full_name, sub.name
+    `, [teacher.id]);
+
+    res.json({ 
+      subjects, 
+      enrollments: enrollments.map(e => ({
+        id: e.id,
+        student_name: e.student_name,
+        section_name: e.section_name,
+        grade_level: e.grade_level,
+        term_name: e.term_name,
+        year_name: e.year_name,
+        subject_name: e.subject_name,
+        display_text: `${e.student_name} -  (Grade ${e.grade_level}${e.section_name}, ${e.term_name} ${e.year_name})`
+      }))
+    });
+  } catch (err) {
+    console.error("Error fetching dropdowns:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Add mark
 exports.addTeacherMark = async (req, res) => {
-  const teacherId = req.user.id;
-  const { enrollment_id, subject_id, score } = req.body;
+  const userId = req.user.id;
+  const { enrollments_id, subjects_id, score } = req.body;
 
   try {
-    const [[check]] = await pool.query(
-      "SELECT * FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?",
-      [teacherId, subject_id]
+    // 1. Get teacher ID
+    const [[teacher]] = await pool.query(
+      'SELECT id FROM teachers WHERE user_id = ?', 
+      [userId]
     );
-    if (!check) return res.status(403).json({ error: "Subject not assigned to you." });
+    if (!teacher) return res.status(403).json({ error: "Teacher not found" });
 
+    // 2. Verify subject assignment (with debug info)
+    const [[subjectAssignment]] = await pool.query(
+      `SELECT ts.*, s.name AS subject_name 
+       FROM teacher_subjects ts
+       JOIN subjects s ON ts.subject_id = s.id
+       WHERE ts.teacher_id = ? AND ts.subject_id = ?`,
+      [teacher.id, subjects_id]
+    );
+
+    if (!subjectAssignment) {
+      console.log(`Teacher ${teacher.id} not assigned to subject ${subjects_id}`);
+      return res.status(403).json({ 
+        error: "Unauthorized subject",
+        details: {
+          teacher_id: teacher.id,
+          subject_id: subjects_id,
+          available_subjects: await getTeacherSubjects(teacher.id)
+        }
+      });
+    }
+
+    // 3. Check for existing mark for the same enrollment and subject
+    const [[existingMark]] = await pool.query(
+      `SELECT id FROM marks WHERE enrollments_id = ? AND subjects_id = ?`,
+      [enrollments_id, subjects_id]
+    );
+    if (existingMark) {
+      return res.status(409).json({ error: "Mark already exists for this student and subject." });
+    }
+
+    // 4. Insert the mark
     await pool.query(
-      "INSERT INTO marks (enrollment_id, subject_id, score) VALUES (?, ?, ?)",
-      [enrollment_id, subject_id, score]
+      `INSERT INTO marks (enrollments_id, subjects_id, score)
+       VALUES (?, ?, ?)`, 
+      [enrollments_id, subjects_id, score]
     );
-    res.status(201).json({ message: "Mark added" });
-  } catch (error) {
-    res.status(500).json({ error: 'Error adding mark' });
-  }
-};
 
-// Update mark if teacher owns the subject
-exports.updateTeacherMark = async (req, res) => {
-  const teacherId = req.user.id;
-  const { id } = req.params;
-  const { score } = req.body;
+    res.status(201).json({ message: "Mark added successfully" });
 
-  try {
-    const [[check]] = await pool.query(`
-      SELECT m.id FROM marks m
-      JOIN teacher_subjects ts ON ts.subject_id = m.subject_id
-      WHERE m.id = ? AND ts.teacher_id = ?
-    `, [id, teacherId]);
-
-    if (!check) return res.status(403).json({ error: "Not authorized" });
-
-    await pool.query("UPDATE marks SET score = ? WHERE id = ?", [score, id]);
-    res.json({ message: "Mark updated" });
-  } catch (error) {
-    res.status(500).json({ error: 'Error updating mark' });
-  }
-};
-
-// Delete mark if teacher owns the subject
-exports.deleteTeacherMark = async (req, res) => {
-  const teacherId = req.user.id;
-  const { id } = req.params;
-
-  try {
-    const [[check]] = await pool.query(`
-      SELECT m.id FROM marks m
-      JOIN teacher_subjects ts ON ts.subject_id = m.subject_id
-      WHERE m.id = ? AND ts.teacher_id = ?
-    `, [id, teacherId]);
-
-    if (!check) return res.status(403).json({ error: "Not authorized" });
-
-    await pool.query("DELETE FROM marks WHERE id = ?", [id]);
-    res.json({ message: "Mark deleted" });
-  } catch (error) {
-    res.status(500).json({ error: 'Error deleting mark' });
+  } catch (err) {
+    console.error("Error adding mark:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -13,12 +13,12 @@ exports.getAnnouncements = async (req, res) => {
 
 // Create a new announcement
 exports.createAnnouncement = async (req, res) => {
-  const { title, subtitle, description, date, monday, tuesday, wednesday, thursday, friday, saturday } = req.body;
+  const { title, subtitle, description, monday, tuesday, wednesday, thursday, friday, saturday } = req.body;
   try {
     const [result] = await db.query(
-      `INSERT INTO announcements (title, subtitle, description, date, monday, tuesday, wednesday, thursday, friday, saturday) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, subtitle, description, date, monday || false, tuesday || false, wednesday || false, thursday || false, friday || false, saturday || false]
+      `INSERT INTO announcements (title, subtitle, description, monday, tuesday, wednesday, thursday, friday, saturday) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, subtitle, description, monday || false, tuesday || false, wednesday || false, thursday || false, friday || false, saturday || false]
     );
     res.status(201).json({ message: "Announcement created successfully" });
   } catch (err) {
@@ -30,13 +30,13 @@ exports.createAnnouncement = async (req, res) => {
 // Update an announcement
 exports.updateAnnouncement = async (req, res) => {
     const { id } = req.params;
-    const { title, subtitle, description, date, monday, tuesday, wednesday, thursday, friday, saturday } = req.body;
+    const { title, subtitle, description, monday, tuesday, wednesday, thursday, friday, saturday } = req.body;
     try {
       const [result] = await db.query(
         `UPDATE announcements 
-         SET title=?, subtitle=?, description=?, date=?, monday=?, tuesday=?, wednesday=?, thursday=?, friday=?, saturday=? 
+         SET title=?, subtitle=?, description=?, monday=?, tuesday=?, wednesday=?, thursday=?, friday=?, saturday=? 
          WHERE id=?`,
-        [title, subtitle, description, date, monday || false, tuesday || false, wednesday || false, thursday || false, friday || false, saturday || false, id]
+        [title, subtitle, description, monday || false, tuesday || false, wednesday || false, thursday || false, friday || false, saturday || false, id]
       );
       res.status(200).json({ message: "Announcement updated successfully" });
     } catch (err) {

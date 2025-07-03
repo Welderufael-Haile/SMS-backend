@@ -10,6 +10,7 @@ try{
   enrollments_id INT NOT NULL,
   subjects_id INT NOT NULL,
   score DECIMAL(5,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (enrollments_id) REFERENCES enrollments(id) ON DELETE CASCADE,
   FOREIGN KEY (subjects_id) REFERENCES subjects(id) ON DELETE CASCADE
  )`;

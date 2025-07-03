@@ -5,8 +5,9 @@ async function createTeachesTable() {
   try{
     // Then create section table
     const sql = `
-  CREATE TABLE IF NOT EXISTS teachers (
+CREATE TABLE IF NOT EXISTS teachers (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNIQUE, 
   full_name VARCHAR(100),
   email VARCHAR(100),
   gender VARCHAR(10),
@@ -15,7 +16,8 @@ async function createTeachesTable() {
   address VARCHAR(255),
   profile_photo VARCHAR(255),
   degree_certificate VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
 )`;
     
     await db.query(sql);

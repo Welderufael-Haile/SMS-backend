@@ -142,7 +142,7 @@ async function startServer() {
 // routes for authentication
 app.use('/api/auth', authRoutes);
 // routes for teacherMarks
-app.use('/api/teacher/marks', teacherMarksRoutes);
+app.use('/api/teachers', teacherMarksRoutes);
 
  // ✅ Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));

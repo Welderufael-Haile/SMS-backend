@@ -65,6 +65,18 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+exports.getTeachersUsers = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT id, full_name, email FROM Users WHERE role = 'teacher' ORDER BY full_name"
+    );
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error("Error fetching teacher users:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 // Delete a user (admin only)
 exports.deleteUser = async (req, res) => {
   const { id } = req.params;

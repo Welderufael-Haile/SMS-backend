@@ -4,7 +4,7 @@ const router = express.Router();
 const teacherController = require("../controllers/teacherController");
 const multer = require("multer");
 const path = require("path");
-
+const {getTeachersUsers } = require("../controllers/authController")
 // Set up Multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
+router.get('/teachers-dropdown', getTeachersUsers);
 router.get("/", teacherController.getAllTeachers);
 router.get("/:id", teacherController.getTeacherById);
 

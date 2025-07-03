@@ -46,17 +46,26 @@ exports.getMarks = async (req, res) => {
 exports.createMark = async (req, res) => {
   try {
     const { enrollment_id, subject_id, score } = req.body;
-    
+
+    // Check for existing mark with same enrollment_id and subject_id
+    const [existing] = await db.execute(
+      `SELECT id FROM marks WHERE enrollments_id = ? AND subjects_id = ?`,
+      [enrollment_id, subject_id]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'Mark already exists for this enrollment and subject.' });
+    }
+
     const [result] = await db.execute(
       `INSERT INTO marks (enrollments_id, subjects_id, score) VALUES (?, ?, ?)`,
       [enrollment_id, subject_id, score]
     );
-    
-    res.status(201).json({ 
-      id: result.insertId, 
-      enrollment_id, 
-      subject_id, 
-      score 
+
+    res.status(201).json({
+      id: result.insertId,
+      enrollment_id,
+      subject_id,
+      score
     });
   } catch (err) {
     console.error('Error creating mark:', err);
