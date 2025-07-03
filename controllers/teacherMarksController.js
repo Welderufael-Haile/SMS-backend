@@ -109,7 +109,7 @@ exports.getDropdowns = async (req, res) => {
     );
     if (!teacher) return res.status(404).json({ error: "Teacher not found" });
 
-    // 2. Get teacher's subjects
+    // 2. Get teacher's subjects (unchanged)
     const [subjects] = await pool.query(`
       SELECT s.id, s.name, s.grade_level 
       FROM subjects s
@@ -117,16 +117,15 @@ exports.getDropdowns = async (req, res) => {
       WHERE ts.teacher_id = ?
     `, [teacher.id]);
 
-    // 3. Get enrollments with all related information
+    // 3. Get UNIQUE enrollments (modified query)
     const [enrollments] = await pool.query(`
-      SELECT 
+      SELECT DISTINCT
         e.id,
         s.full_name AS student_name,
         sec.name AS section_name,
         sec.grade_level,
         t.term_name,
-        ay.year_name,
-        sub.name AS subject_name
+        ay.year_name
       FROM enrollments e
       JOIN Student s ON e.student_id = s.id
       JOIN sections sec ON e.sections_id = sec.id
@@ -135,20 +134,15 @@ exports.getDropdowns = async (req, res) => {
       JOIN subjects sub ON sub.grade_level = sec.grade_level
       JOIN teacher_subjects ts ON ts.subject_id = sub.id
       WHERE ts.teacher_id = ?
-      ORDER BY s.full_name, sub.name
+      ORDER BY s.full_name
     `, [teacher.id]);
 
     res.json({ 
       subjects, 
       enrollments: enrollments.map(e => ({
         id: e.id,
-        student_name: e.student_name,
-        section_name: e.section_name,
-        grade_level: e.grade_level,
-        term_name: e.term_name,
-        year_name: e.year_name,
-        subject_name: e.subject_name,
-        display_text: `${e.student_name} -  (Grade ${e.grade_level}${e.section_name}, ${e.term_name} ${e.year_name})`
+        display_text: `${e.student_name} - (Grade ${e.grade_level}${e.section_name}, ${e.term_name} ${e.year_name})`,
+        ...e
       }))
     });
   } catch (err) {

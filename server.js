@@ -29,7 +29,7 @@ const cookieParser = require('cookie-parser');
  const applicantsRoutes = require('./routes/applicantsRoutes');
  const authRoutes = require('./routes/authRoutes');
  const teacherMarksRoutes = require('./routes/teacherMarksRoutes');
-
+ const teacherSubjectsRoutes = require('./routes/teacherSubjectsRoutes');
 
  const app = express();
 
@@ -143,6 +143,8 @@ async function startServer() {
 app.use('/api/auth', authRoutes);
 // routes for teacherMarks
 app.use('/api/teachers', teacherMarksRoutes);
+// routes fro teacher_subjects assignment
+app.use('/api/teacher-subjects', teacherSubjectsRoutes);
 
  // ✅ Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));
