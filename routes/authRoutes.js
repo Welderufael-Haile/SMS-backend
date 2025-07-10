@@ -13,6 +13,7 @@ router.post('/register', verifyToken, requireRole(['admin']), auth.register);
 router.get('/users', verifyToken, requireRole(['admin']), auth.getUsers);
 router.put('/users/:id', verifyToken, requireRole(['admin']), auth.updateUser);
 router.delete('/users/:id', verifyToken, requireRole(['admin']), auth.deleteUser);
+router.post("/create-admin", auth.createAdmin);
 
 // Role-protected dashboard sample routes
 // Inside routes/auth.js

@@ -20,6 +20,26 @@ exports.register = async (req, res) => {
   }
 };
 
+// One-time admin creation route (only run once)
+exports.createAdmin = async (req, res) => {
+  try {
+    const full_name = "Admin One";
+    const email = "admin@school.com";
+    const password = await bcrypt.hash("admin123", 10);
+    const role = "admin";
+
+    await pool.query(
+      "INSERT INTO Users (full_name, email, password, role) VALUES (?, ?, ?, ?)",
+      [full_name, email, password, role]
+    );
+
+    res.status(201).json({ message: "Admin user created ✅" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
 // Login
 exports.login = async (req, res) => {
   const { email, password } = req.body;
