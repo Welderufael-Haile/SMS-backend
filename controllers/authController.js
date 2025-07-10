@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const SECRET = process.env.JWT_SECRET;
-//console.log("JWT_SECRET is:", SECRET);
+console.log("JWT_SECRET is:", SECRET);
 
 // Register (admin only)
 exports.register = async (req, res) => {

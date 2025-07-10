@@ -45,7 +45,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Import table creation
-const { createParentTable } = require('./models/parentTable');
+const { createParentsTable } = require('./models/parentTable');
 const { createStudentTable } = require("./models/studentModel");
 const { createSectionsTable} = require('./models/sectionModel');
 const { createacademicYearTable} = require('./models/academicYearTable');
@@ -67,26 +67,27 @@ async function initializeDatabase() {
   try {
     // Test connection
     await db.query("SELECT 1");
-    console.log("🔌 Database connected");
+    console.log(" Database connected");
 
     // Create tables
+    
+    await createUserTable();
+    await createTeachesTable();
+    await createParentsTable();
     await createStudentTable(); // create student table
     await createSectionsTable();
-    await createTermsTable();
     await createacademicYearTable();
-    await createParentTable();
+    await createTermsTable();
     await createSubjectsTable();
+    await createTeacher_subjectsTable();
     await createAnnouncementTable();
+    await createJobsTable();
+    await createContactsTable();
+    await createApplicantsTable();
+    //await createMarklistTable();
     await createEnrollmentTable();
     await createMarksTable();
-    await createJobsTable();
-    await createMarklistTable();
-    await createContactsTable();
-    await createTeachesTable();
     await createRsultsTable();
-    await createApplicantsTable();
-    await createUserTable();
-    await createTeacher_subjectsTable();
    // Add other table creation function calls here as needed
     console.log("🛠️  Database tables ready");
   } catch (error) {

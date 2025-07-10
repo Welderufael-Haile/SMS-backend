@@ -27,8 +27,7 @@ try{
   Total FLOAT DEFAULT 0,
   Average FLOAT DEFAULT 0,
   Flag ENUM('green', 'blue', 'yellow', 'red') DEFAULT 'green',
-  Rank INT DEFAULT NULL,
-
+  Rank INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
  )`;

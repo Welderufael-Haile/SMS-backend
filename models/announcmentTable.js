@@ -18,8 +18,7 @@ try{
     wednesday VARCHAR(255) NOT NULL,
     thursday VARCHAR(255) NOT NULL,
     friday VARCHAR(255) NOT NULL,
-    saturday VARCHAR(255) NOT NULL,
-    post_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    saturday VARCHAR(255) NOT NULL
   )`;
     await db.query(sql);
     console.log("✅  announcement table ready");
