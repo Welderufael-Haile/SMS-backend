@@ -35,7 +35,7 @@ const cookieParser = require('cookie-parser');
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:3000","http://192.168.100.104:3000"], // Adjust this to your frontend URL}));
+  origin: ["http://localhost:3000","http://192.168.100.104:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
   credentials: true, // Allow cookies to be sent
 }));
 
