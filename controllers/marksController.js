@@ -20,7 +20,7 @@ exports.getMarks = async (req, res) => {
       FROM marks m
       JOIN subjects s ON m.subjects_id = s.id
       JOIN enrollments e ON m.enrollments_id = e.id
-      JOIN student st ON e.student_id = st.id
+      JOIN Student st ON e.Student_id = st.id
       JOIN academic_year ay ON e.academic_year_id = ay.id
       JOIN terms t ON e.terms_id = t.id
       JOIN sections sec ON e.sections_id = sec.id
@@ -111,7 +111,7 @@ exports.getDropdowns = async (req, res) => {
         ay.year_name, 
         t.term_name
       FROM enrollments e
-      JOIN student st ON e.student_id = st.id
+      JOIN Student st ON e.Student_id = st.id
       JOIN sections s ON e.sections_id = s.id
       JOIN academic_year ay ON e.academic_year_id = ay.id
       JOIN terms t ON e.terms_id = t.id

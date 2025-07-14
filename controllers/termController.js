@@ -6,7 +6,7 @@ exports.createTerm = async (req, res) => {
 
     // Check if the term_name already exists for the same academic_year_id
     const [existing] = await pool.query(
-      'SELECT id FROM Terms WHERE academic_year_id = ? AND term_name = ?',
+      'SELECT id FROM terms WHERE academic_year_id = ? AND term_name = ?',
       [academic_year_id, term_name]
     );
     if (existing.length > 0) {
@@ -14,7 +14,7 @@ exports.createTerm = async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      'INSERT INTO Terms (academic_year_id, term_name, start_date, end_date) VALUES (?, ?, ?, ?)',
+      'INSERT INTO terms (academic_year_id, term_name, start_date, end_date) VALUES (?, ?, ?, ?)',
       [academic_year_id, term_name, start_date, end_date]
     );
     res.status(201).json({ id: result.insertId });
@@ -27,7 +27,7 @@ exports.getTermsByAcademicYear = async (req, res) => {
   try {
     const { academicYearId } = req.params;
     const [rows] = await pool.query(
-      'SELECT * FROM Terms WHERE academic_year_id = ? ORDER BY start_date',
+      'SELECT * FROM terms WHERE academic_year_id = ? ORDER BY start_date',
       [academicYearId]
     );
     res.json(rows);
@@ -49,7 +49,7 @@ exports.getTermById = async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await pool.query(
-      'SELECT * FROM Terms WHERE id = ?',
+      'SELECT * FROM terms WHERE id = ?',
       [id]
     );
     if (rows.length === 0) {
@@ -67,7 +67,7 @@ exports.updateTerm = async (req, res) => {
     const { term_name, start_date, end_date } = req.body;
     
     const [result] = await pool.execute(
-      'UPDATE Terms SET term_name = ?, start_date = ?, end_date = ? WHERE id = ?',
+      'UPDATE terms SET term_name = ?, start_date = ?, end_date = ? WHERE id = ?',
       [term_name, start_date, end_date, id]
     );
     
@@ -86,7 +86,7 @@ exports.deleteTerm = async (req, res) => {
     const { id } = req.params;
     
     const [result] = await pool.execute(
-      'DELETE FROM Terms WHERE id = ?',
+      'DELETE FROM terms WHERE id = ?',
       [id]
     );
     

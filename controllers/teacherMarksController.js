@@ -16,7 +16,7 @@ const [marks] = await pool.query(`
   SELECT m.*, e.id AS enrollment_id, s.full_name AS student_name, sub.name
   FROM marks m
   JOIN enrollments e ON m.enrollments_id = e.id
-  JOIN students s ON e.student_id = s.id
+  JOIN Student s ON e.student_id = s.id
   JOIN subjects sub ON m.subjects_id = sub.id
   JOIN teacher_subjects ts ON ts.subject_id = m.subjects_id
   WHERE ts.teacher_id = ?

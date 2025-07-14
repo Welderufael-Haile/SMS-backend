@@ -10,7 +10,7 @@ exports.getAllClasses = async (req, res) => {
       LEFT JOIN sections s ON c.section_id = s.id
       LEFT JOIN terms t ON c.term_id = t.id
       LEFT JOIN academic_year ay ON c.academic_year_id = ay.id
-      LEFT JOIN student st ON st.sections_id = c.section_id 
+      LEFT JOIN Student st ON st.sections_id = c.section_id 
                           AND st.terms_id = c.term_id
                           AND st.academic_year_id = c.academic_year_id
       GROUP BY c.id, s.name, s.grade_level, t.term_name, ay.year_name
