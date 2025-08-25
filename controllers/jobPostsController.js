@@ -1,4 +1,3 @@
-
 const db = require("../config/db");
 
 // Get all job posts
@@ -14,11 +13,11 @@ exports.getJobPosts = async (req, res) => {
 
 // Create a new job post
 exports.createJobPost = async (req, res) => {
-  const { title, position, description } = req.body;
+  const { title, position, description, deadline } = req.body;
   try {
     const [result] = await db.query(
-      "INSERT INTO job_posts (title, position, description) VALUES (?, ?, ?)",
-      [title, position, description]
+      "INSERT INTO job_posts (title, position, description, deadline) VALUES (?, ?, ?, ?)",
+      [title, position, description, deadline]
     );
     res.status(201).json({ message: "Job post created successfully" });
   } catch (err) {
@@ -30,11 +29,11 @@ exports.createJobPost = async (req, res) => {
 // Update a job post
 exports.updateJobPost = async (req, res) => {
   const { id } = req.params;
-  const { title, position, description } = req.body;
+  const { title, position, description, deadline } = req.body;
   try {
     const [result] = await db.query(
-      "UPDATE job_posts SET title=?, position=?, description=? WHERE id=?",
-      [title, position, description, id]
+      "UPDATE job_posts SET title=?, position=?, description=?, deadline=? WHERE id=?",
+      [title, position, description, deadline, id]
     );
     res.status(200).json({ message: "Job post updated successfully" });
   } catch (err) {

@@ -30,7 +30,7 @@ const cookieParser = require('cookie-parser');
  const authRoutes = require('./routes/authRoutes');
  const teacherMarksRoutes = require('./routes/teacherMarksRoutes');
  const teacherSubjectsRoutes = require('./routes/teacherSubjectsRoutes');
-
+const statsRoutes = require('./routes/statsRoutes');
  const app = express();
 
 // Middleware
@@ -145,6 +145,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/teachers', teacherMarksRoutes);
 // routes fro teacher_subjects assignment
 app.use('/api/teacher-subjects', teacherSubjectsRoutes);
+app.use('/api', statsRoutes);
+
 
  // ✅ Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));

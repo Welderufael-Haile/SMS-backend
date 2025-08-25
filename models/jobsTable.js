@@ -9,8 +9,9 @@ try{
     title VARCHAR(255) NOT NULL,
     position VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    post_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   ) `;
+    post_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deadline DATE NOT NULL
+)`;
     await db.query(sql);
     console.log("✅  jobs table ready");
     return true;

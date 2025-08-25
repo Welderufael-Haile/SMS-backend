@@ -13,7 +13,7 @@ async function createParentsTable() {
         Address VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `;
+    `;  
 
     await db.query(sql); // ✅ Must run before you log success
     console.log("✅ parents table ready");

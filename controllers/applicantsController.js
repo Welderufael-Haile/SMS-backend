@@ -11,6 +11,15 @@ exports.createApplicant = async (req, res) => {
       return res.status(400).json({ message: 'All fields are required.' });
     }
 
+    // Check if email already exists
+    const [existing] = await db.query(
+      'SELECT id FROM job_applications WHERE email = ?',
+      [email]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'This email has already been used to apply.' });
+    }
+
     const sql = `
       INSERT INTO job_applications (position, fullname, sex, email, phone, cv_path)
       VALUES (?, ?, ?, ?, ?, ?)
