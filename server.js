@@ -35,7 +35,7 @@ const statsRoutes = require('./routes/statsRoutes');
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:3000","http://192.168.100.104:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
+  origin: ["http://localhost:3000"," https://192.168.1.12:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
   credentials: true, // Allow cookies to be sent
 }));
 
@@ -57,7 +57,7 @@ const {createJobsTable} = require('./models/jobsTable');
 const {createContactsTable} = require('./models/contactsTable');
 const {createMarklistTable} = require('./models/marklistTable');
 const {createTeachesTable} = require('./models/teacherTable');
-const {createRsultsTable} = require('./models/resultTable');
+//const {createRsultsTable} = require('./models/resultTable');
 const {createApplicantsTable} = require('./models/jobApplicationsTable');
 const{createUserTable} = require('./models/userModel');
 const {createTeacher_subjectsTable} = require('./models/teacher_subjectsModel')
@@ -86,7 +86,7 @@ async function initializeDatabase() {
     //await createMarklistTable();
     await createEnrollmentTable();
     await createMarksTable();
-    await createRsultsTable();
+    //await createRsultsTable();
    // Add other table creation function calls here as needed
     console.log("🛠️  Database tables ready");
   } catch (error) {
