@@ -22,15 +22,18 @@
 const express = require('express');
 const router = express.Router();
 
-const {getAllEnrollments, getDropdowns,createEnrollment,updateEnrollment,deleteEnrollment,exportToExcel
+const {getAllEnrollments, getDropdowns,createEnrollment,updateEnrollment,deleteEnrollment,exportToExcel,updateEnrollmentStatus,enrollNextTerm
 } = require('../controllers/enrollmentController');
 
 // Define the routes
 router.get('/', getAllEnrollments);
-router.get('/dropdowns', getDropdowns);
+router.get('/dropdowns', getDropdowns); 
 router.post('/', createEnrollment);
 router.put('/:id', updateEnrollment);
 router.delete('/:id', deleteEnrollment);
 router.get('/export', exportToExcel); // <-- Make sure this exists
+router.put('/:id/status', updateEnrollmentStatus);  // route for updating status
+router.post('/term/auto-enroll', enrollNextTerm);
+
 
 module.exports = router;

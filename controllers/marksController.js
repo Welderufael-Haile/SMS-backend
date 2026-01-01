@@ -43,6 +43,7 @@ exports.getMarks = async (req, res) => {
   }
 };
 
+// create mark function
 exports.createMark = async (req, res) => {
   try {
     const { enrollment_id, subject_id, score } = req.body;
@@ -72,7 +73,7 @@ exports.createMark = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
+// update mark
 exports.updateMark = async (req, res) => {
   try {
     const { id } = req.params;

@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 
 
  const teacherRoutes = require('./routes/teacherRoutes'); //for new teacher route
- const newstudentRoutes = require("./routes/newstudentRoutes"); // ✅ Import students routes
+ const newstudentRoutes = require("./routes/newstudentRoutes"); //  Import students routes
  const announcementsRoutes = require("./routes/announcementRoutes"); // import announcement route
  const jobPostRoutes = require("./routes/jobPostRoutes");
  const contactRoutes = require("./routes/contactRoutes"); 
@@ -20,7 +20,7 @@ const cookieParser = require('cookie-parser');
  const addStudentRoutes = require("./routes/addStudentRoutes");
  const studentListRoute = require("./routes/studentListRoute");
  const marklistRoutes = require('./routes/marklistRoutes');
- const termRoutes = require('./routes/termRoutes'); // ✅ Import the router
+ const termRoutes = require('./routes/termRoutes'); // Import the router
  const classesRoutes = require('./routes/classesRoutes');
  const academicYearRoutes = require('./routes/academicYearRoutes');
  const enrollmentRoutes = require('./routes/enrollmentRoutes');
@@ -31,6 +31,8 @@ const cookieParser = require('cookie-parser');
  const teacherMarksRoutes = require('./routes/teacherMarksRoutes');
  const teacherSubjectsRoutes = require('./routes/teacherSubjectsRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const promotionRoutes = require('./routes/promotionRoutes');
+
  const app = express();
 
 // Middleware
@@ -88,9 +90,9 @@ async function initializeDatabase() {
     await createMarksTable();
     //await createRsultsTable();
    // Add other table creation function calls here as needed
-    console.log("🛠️  Database tables ready");
+    console.log(" Database tables ready");
   } catch (error) {
-    console.error("❌ Database initialization failed:", error);
+    console.error(" Database initialization failed:", error);
     throw error;
   }
 }
@@ -101,11 +103,11 @@ async function startServer() {
     
   // Setup routes
   // Routes for students
- app.use("/api/students", newstudentRoutes); // ✅ Use routes
+ app.use("/api/students", newstudentRoutes); // Use routes
  // new teachers
  app.use("/api/teacher", teacherRoutes);
  //routes for announcements
- app.use("/api/announcements", announcementsRoutes); // ✅ This should be a function, not an object
+ app.use("/api/announcements", announcementsRoutes); // This should be a function, not an object
  //routes for jobposts
  app.use("/api/", jobPostRoutes);
 
@@ -146,16 +148,17 @@ app.use('/api/teachers', teacherMarksRoutes);
 // routes fro teacher_subjects assignment
 app.use('/api/teacher-subjects', teacherSubjectsRoutes);
 app.use('/api', statsRoutes);
+app.use('/api/promote', promotionRoutes);
 
 
- // ✅ Serve uploaded files
+ //  Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));
     const PORT = process.env.PORT || 5000;
     app.listen(PORT,"0.0.0.0", () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("💥 Failed to start server:", error);
+    console.error("Failed to start server:", error);
     process.exit(1);
   }
 }
