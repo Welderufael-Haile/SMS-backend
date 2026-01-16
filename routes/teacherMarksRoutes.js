@@ -8,5 +8,6 @@ router.get('/marks', verifyToken, requireRole(['teacher']), teacherMarksControll
 router.get('/students-with-marks', verifyToken,  requireRole(['teacher']), teacherMarksController.getStudentsWithMarks);
 router.get('/dropdowns', verifyToken, requireRole(['teacher']), teacherMarksController.getDropdowns);
 router.post('/marks', verifyToken, requireRole(['teacher']), teacherMarksController.addTeacherMark);
+router.get('/stats', verifyToken, requireRole(['teacher']), teacherMarksController.getTeacherStats);
 
 module.exports = router;

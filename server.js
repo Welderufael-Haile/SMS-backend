@@ -10,7 +10,6 @@ const cookieParser = require('cookie-parser');
 
 
  const teacherRoutes = require('./routes/teacherRoutes'); //for new teacher route
- const newstudentRoutes = require("./routes/newstudentRoutes"); //  Import students routes
  const announcementsRoutes = require("./routes/announcementRoutes"); // import announcement route
  const jobPostRoutes = require("./routes/jobPostRoutes");
  const contactRoutes = require("./routes/contactRoutes"); 
@@ -19,7 +18,6 @@ const cookieParser = require('cookie-parser');
  const sectionsRoutes = require("./routes/sectionsRoutes");
  const addStudentRoutes = require("./routes/addStudentRoutes");
  const studentListRoute = require("./routes/studentListRoute");
- const marklistRoutes = require('./routes/marklistRoutes');
  const termRoutes = require('./routes/termRoutes'); // Import the router
  const classesRoutes = require('./routes/classesRoutes');
  const academicYearRoutes = require('./routes/academicYearRoutes');
@@ -29,7 +27,7 @@ const cookieParser = require('cookie-parser');
  const applicantsRoutes = require('./routes/applicantsRoutes');
  const authRoutes = require('./routes/authRoutes');
  const teacherMarksRoutes = require('./routes/teacherMarksRoutes');
- const teacherSubjectsRoutes = require('./routes/teacherSubjectsRoutes');
+ const teacherSectionSubjectRoutes = require("./routes/teacherSectionSubjectRoutes");
  const statsRoutes = require('./routes/statsRoutes');
  const promotionRoutes = require('./routes/promotionRoutes');
  const reportCardRoutes = require("./routes/reportCardRoutes");
@@ -38,7 +36,7 @@ const cookieParser = require('cookie-parser');
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:3000"," https://192.168.1.12:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
+  origin: ["http://localhost:3000"," http://192.168.1.34:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
   credentials: true, // Allow cookies to be sent
 }));
 
@@ -58,12 +56,12 @@ const { createEnrollmentTable} = require('./models/enrollmentTable');
 const { createMarksTable} = require('./models/marksTable');
 const {createJobsTable} = require('./models/jobsTable');
 const {createContactsTable} = require('./models/contactsTable');
-const {createMarklistTable} = require('./models/marklistTable');
 const {createTeachesTable} = require('./models/teacherTable');
 //const {createRsultsTable} = require('./models/resultTable');
 const {createApplicantsTable} = require('./models/jobApplicationsTable');
 const{createUserTable} = require('./models/userModel');
-const {createTeacher_subjectsTable} = require('./models/teacher_subjectsModel')
+const { createTeacherSectionSubjectsTable } = require("./models/teacherSectionSubjectModel");
+
 // initialize the database and create tables
 async function initializeDatabase() {
   try {
@@ -81,15 +79,13 @@ async function initializeDatabase() {
     await createacademicYearTable();
     await createTermsTable();
     await createSubjectsTable();
-    await createTeacher_subjectsTable();
     await createAnnouncementTable();
     await createJobsTable();
     await createContactsTable();
     await createApplicantsTable();
-    //await createMarklistTable();
     await createEnrollmentTable();
     await createMarksTable();
-    //await createRsultsTable();
+    await createTeacherSectionSubjectsTable();
    // Add other table creation function calls here as needed
     console.log(" Database tables ready");
   } catch (error) {
@@ -104,7 +100,7 @@ async function startServer() {
     
   // Setup routes
   // Routes for students
- app.use("/api/students", newstudentRoutes); // Use routes
+ 
  // new teachers
  app.use("/api/teacher", teacherRoutes);
  //routes for announcements
@@ -126,8 +122,7 @@ async function startServer() {
  app.use("/api", studentListRoute);
  // classes routes
  app.use('/api/classes', classesRoutes);
- //marklist
- app.use('/api/marklist', marklistRoutes);
+ 
  // routes for terms and years
  app.use('/api/academic-year', academicYearRoutes);
   // Routes for terms
@@ -139,17 +134,20 @@ async function startServer() {
 
  //routes for rasults
  app.use('/api/results', resultRoutes);
- // routes for applicants
+ // routes for job applicants
  app.use('/api/applicants', applicantsRoutes);
  
 // routes for authentication
 app.use('/api/auth', authRoutes);
 // routes for teacherMarks
 app.use('/api/teachers', teacherMarksRoutes);
-// routes fro teacher_subjects assignment
-app.use('/api/teacher-subjects', teacherSubjectsRoutes);
+// routes for teacher_section_subjects assignment
+app.use("/api/teacher-section-subjects", teacherSectionSubjectRoutes);
+// routes for stats
 app.use('/api', statsRoutes);
+// routes for promotion
 app.use('/api/promote', promotionRoutes);
+// routes for report cards
 app.use("/api/report-cards", reportCardRoutes);
 
 
