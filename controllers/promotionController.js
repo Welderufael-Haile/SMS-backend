@@ -115,7 +115,7 @@
 
 const db = require('../config/db');
 
-// --- 1. Preview Promotion Results ---
+// 1. Preview Promotion Results ---
 exports.previewPromotion = async (req, res) => {
   const { academic_year_id } = req.query;
   if (!academic_year_id) return res.status(400).json({ message: "Academic Year ID required" });
@@ -148,7 +148,7 @@ exports.previewPromotion = async (req, res) => {
   }
 };
 
-// --- 2. Confirm and Execute Promotion ---
+// 2. Confirm and Execute Promotion ---
 
 
 exports.confirmPromotion = async (req, res) => {

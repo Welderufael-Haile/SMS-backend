@@ -6,13 +6,12 @@ const path = require("path");
 const bodyParser = require("body-parser");
 const db = require("./config/db");
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet'); // 🔹 Import Helmet for security
 
-
-
- const teacherRoutes = require('./routes/teacherRoutes'); //for new teacher route
+ const teacherRoutes = require('./routes/teacherRoutes'); //for add new teacher route
  const announcementsRoutes = require("./routes/announcementRoutes"); // import announcement route
- const jobPostRoutes = require("./routes/jobPostRoutes");
- const contactRoutes = require("./routes/contactRoutes"); 
+ const jobPostRoutes = require("./routes/jobPostRoutes");  // for post jobs route
+ const contactRoutes = require("./routes/contactRoutes"); // fro contact message route
  const subjectsRoutes = require("./routes/subjectsRoutes");
  const parentRoutes = require('./routes/parentRoutes');
  const sectionsRoutes = require("./routes/sectionsRoutes");
@@ -34,6 +33,12 @@ const cookieParser = require('cookie-parser');
  
  const app = express();
 
+ // 🛡️ Helmet helps secure your apps by setting various HTTP headers.
+// It prevents XSS attacks, clickjacking, and hides 'X-Powered-By: Express'
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Required to allow loading images/files
+}));
+
 // Middleware
 app.use(cors({
   origin: ["http://localhost:3000"," http://192.168.1.34:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
@@ -46,10 +51,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Import table creation
 const { createParentsTable } = require('./models/parentTable');
-const { createStudentTable } = require("./models/studentModel");
 const { createSectionsTable} = require('./models/sectionModel');
 const { createacademicYearTable} = require('./models/academicYearTable');
 const { createTermsTable} = require('./models/termsTable');
+const { createStudentTable } = require("./models/studentModel");
 const { createSubjectsTable } = require('./models/subjectsTable');
 const { createAnnouncementTable } = require('./models/announcmentTable');
 const { createEnrollmentTable} = require('./models/enrollmentTable');
@@ -153,15 +158,33 @@ app.use("/api/report-cards", reportCardRoutes);
 
  //  Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+  // If a request reaches here, it means no route matched
+    app.use((req, res) => {
+      res.status(404).json({ error: "The requested resource was not found on this server." });
+    });
+
+  // This catches every 'next(err)' or 'throw error' in your app
+    app.use((err, req, res, next) => {
+      console.error(`[SYSTEM ERROR] ${new Date().toLocaleString()}:`, err.stack);
+
+      // In production, we don't leak the error stack trace to the user
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      res.status(err.status || 500).json({
+        error: isProduction 
+          ? "An internal security or server error occurred." 
+          : err.message
+      });
+    });
+
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT,"0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server secured and running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    console.error("Critical: Failed to start server:", error);
     process.exit(1);
   }
 }
 
-// Start the application
 startServer();
