@@ -44,12 +44,14 @@ async function createEnrollmentTable() {
         terms_id INT NOT NULL,
         sections_id INT NOT NULL,
 
-        -- NEW COLUMNS
         status ENUM('active','promoted','repeated','completed')
           DEFAULT 'active',
 
         final_average DECIMAL(5,2) DEFAULT NULL,
-
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP NULL DEFAULT NULL,
+        promotion_note VARCHAR(255) DEFAULT NULL,
         -- PREVENT DUPLICATE ENROLLMENT
         UNIQUE KEY unique_enrollment (
           student_id,
