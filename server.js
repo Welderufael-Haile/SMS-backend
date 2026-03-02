@@ -30,7 +30,7 @@ const helmet = require('helmet'); // 🔹 Import Helmet for security
  const statsRoutes = require('./routes/statsRoutes');
  const promotionRoutes = require('./routes/promotionRoutes');
  const reportCardRoutes = require("./routes/reportCardRoutes");
- 
+ const graduationRoutes = require("./routes/graduationRoutes");
  const app = express();
 
  // 🛡️ Helmet helps secure your apps by setting various HTTP headers.
@@ -66,7 +66,7 @@ const {createTeachesTable} = require('./models/teacherTable');
 const {createApplicantsTable} = require('./models/jobApplicationsTable');
 const{createUserTable} = require('./models/userModel');
 const { createTeacherSectionSubjectsTable } = require("./models/teacherSectionSubjectModel");
-
+const { createGraduationRecordsTable } = require("./models/graduationModel");
 // initialize the database and create tables
 async function initializeDatabase() {
   try {
@@ -91,6 +91,7 @@ async function initializeDatabase() {
     await createEnrollmentTable();
     await createMarksTable();
     await createTeacherSectionSubjectsTable();
+    await createGraduationRecordsTable();
    // Add other table creation function calls here as needed
     console.log(" Database tables ready");
   } catch (error) {
@@ -154,7 +155,7 @@ app.use('/api', statsRoutes);
 app.use('/api/promote', promotionRoutes);
 // routes for report cards
 app.use("/api/report-cards", reportCardRoutes);
-
+app.use("/api/graduation", graduationRoutes);
 
  //  Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));

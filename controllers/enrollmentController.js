@@ -2,33 +2,6 @@
 const db = require("../config/db");
 const ExcelJS = require('exceljs');
 
-// 1. Fetch all with filters
-// exports.getAllEnrollments = async (req, res) => {
-//   try {
-//     const { year, term, section, student } = req.query;
-//     let query = `
-//       SELECT e.*, s.full_name, s.Sex, ay.year_name, t.term_name, t.start_date, sec.name AS section_name, sec.grade_level
-//       FROM enrollments e
-//       JOIN Student s ON e.student_id = s.id
-//       JOIN academic_year ay ON e.academic_year_id = ay.id
-//       JOIN terms t ON e.terms_id = t.id
-//       JOIN sections sec ON e.sections_id = sec.id
-//       WHERE e.status = 'active'  /* ← ADD THIS LINE */
-//     `;
-//     const params = [];
-//     if (year) { query += ` AND e.academic_year_id = ?`; params.push(year); }
-//     if (term) { query += ` AND e.terms_id = ?`; params.push(term); }
-//     if (section) { query += ` AND e.sections_id = ?`; params.push(section); }
-//     if (student) { query += ` AND s.full_name LIKE ?`; params.push(`%${student}%`); }
-
-//     query += ` ORDER BY ay.year_name DESC, t.term_name DESC`;
-//     const [rows] = await db.query(query, params);
-//     res.json(rows);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// };
-
 exports.getAllEnrollments = async (req, res) => {
   try {
     const { year, term, section, student, page = 1, limit = 30 } = req.query;
@@ -112,15 +85,24 @@ exports.getAllEnrollments = async (req, res) => {
 // 2. Dropdowns
 exports.getDropdowns = async (req, res) => {
   try {
-    const [academic_years] = await db.query('SELECT id, year_name FROM academic_year');
-    const [terms] = await db.query('SELECT id, term_name, start_date FROM terms');
-    const [sections] = await db.query('SELECT id, name, grade_level FROM sections');
-    const [students] = await db.query('SELECT id, full_name FROM Student');
-    res.json({ academic_years, terms, sections, students });
+    const [students] = await db.execute("SELECT id, full_name FROM Student ORDER BY full_name");
+    const [academic_years] = await db.execute("SELECT id, year_name FROM academic_year ORDER BY year_name DESC");
+    
+    // IMPORTANT: Include academic_year_id in terms
+    const [terms] = await db.execute(`
+      SELECT t.id, t.term_name, t.start_date, t.academic_year_id 
+      FROM terms t 
+      ORDER BY t.start_date
+    `);
+    
+    const [sections] = await db.execute("SELECT id, name, grade_level FROM sections ORDER BY grade_level, name");
+
+    res.json({ students, academic_years, terms, sections });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // 3. Create (Prevent double enrollment in same term)
 exports.createEnrollment = async (req, res) => {
@@ -248,53 +230,16 @@ exports.exportToExcel = async (req, res) => {
 };
 
 // 8. Auto-Enroll (Prevents duplicating students already in next term)
-// exports.enrollNextTerm = async (req, res) => {
-//   const { academic_year_id, current_term_id, next_term_id } = req.body;
-//   let connection;
-//   try {
-//     connection = await db.getConnection();
-//     await connection.beginTransaction();
 
-//     const [activeStudents] = await connection.query(
-//       `SELECT student_id, sections_id FROM enrollments WHERE academic_year_id = ? AND terms_id = ? AND status = 'active'`,
-//       [academic_year_id, current_term_id]
-//     );
-
-//     let count = 0;
-//     for (const student of activeStudents) {
-//       // THE DUPLICATE PREVENTER:
-//       const [exists] = await connection.query(
-//         'SELECT id FROM enrollments WHERE student_id = ? AND academic_year_id = ? AND terms_id = ?',
-//         [student.student_id, academic_year_id, next_term_id]
-//       );
-
-//       if (exists.length === 0) {
-//         await connection.query(
-//           'INSERT INTO enrollments (student_id, academic_year_id, terms_id, sections_id, status) VALUES (?, ?, ?, ?, "active")',
-//           [student.student_id, academic_year_id, next_term_id, student.sections_id]
-//         );
-//         count++;
-//       }
-//     }
-
-//     await connection.commit();
-//     res.json({ message: 'Success', enrolled: count });
-//   } catch (err) {
-//     if (connection) await connection.rollback();
-//     res.status(500).json({ error: err.message });
-//   } finally {
-//     if (connection) connection.release();
-//   }
-// };
-// In your enrollNextTerm function
 exports.enrollNextTerm = async (req, res) => {
-  const { academic_year_id, current_term_id, next_term_id } = req.body;
+  const { academic_year_id, current_term_id, next_term_id, next_academic_year_id } = req.body;
   let connection;
+  
   try {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // First, mark current term students as completed with date
+    // First, mark current term students as completed
     await connection.query(
       `UPDATE enrollments 
        SET status = 'completed', completed_at = NOW() 
@@ -302,7 +247,7 @@ exports.enrollNextTerm = async (req, res) => {
       [academic_year_id, current_term_id]
     );
 
-    // Then get students to enroll in next term
+    // Get students to enroll in next term
     const [activeStudents] = await connection.query(
       `SELECT student_id, sections_id FROM enrollments 
        WHERE academic_year_id = ? AND terms_id = ? AND status = 'completed'`,
@@ -311,30 +256,40 @@ exports.enrollNextTerm = async (req, res) => {
 
     let count = 0;
     for (const student of activeStudents) {
+      // Check if already enrolled in next term/year
       const [exists] = await connection.query(
         'SELECT id FROM enrollments WHERE student_id = ? AND academic_year_id = ? AND terms_id = ?',
-        [student.student_id, academic_year_id, next_term_id]
+        [student.student_id, next_academic_year_id, next_term_id]
       );
 
       if (exists.length === 0) {
         await connection.query(
           'INSERT INTO enrollments (student_id, academic_year_id, terms_id, sections_id, status) VALUES (?, ?, ?, ?, "active")',
-          [student.student_id, academic_year_id, next_term_id, student.sections_id]
+          [student.student_id, next_academic_year_id, next_term_id, student.sections_id]
         );
         count++;
       }
     }
 
     await connection.commit();
-    res.json({ message: 'Success', enrolled: count });
+    res.json({ 
+      message: 'Success', 
+      enrolled: count,
+      from_year: academic_year_id,
+      to_year: next_academic_year_id,
+      from_term: current_term_id,
+      to_term: next_term_id
+    });
   } catch (err) {
     if (connection) await connection.rollback();
+    console.error('Auto-enroll error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     if (connection) connection.release();
   }
 };
 
+// get archived enrollments with filters and pagination
 exports.getArchivedEnrollments = async (req, res) => {
   try {
     const { year, term, section, student, status, page = 1, limit = 30 } = req.query;
@@ -408,7 +363,7 @@ exports.getArchivedEnrollments = async (req, res) => {
   }
 };
 
-// Restore from archive
+// Restore from archive to active (also clears completed_at)
 exports.restoreEnrollment = async (req, res) => {
   try {
     await db.query(
@@ -421,7 +376,7 @@ exports.restoreEnrollment = async (req, res) => {
   }
 };
 
-// Permanent delete
+// Permanent delete (only if not active) in archive page
 exports.permanentDelete = async (req, res) => {
   try {
     await db.query('DELETE FROM enrollments WHERE id=? AND status != "active"', [req.params.id]);
@@ -431,7 +386,7 @@ exports.permanentDelete = async (req, res) => {
   }
 };
 
-// Get archive count
+// Get archive count for archive dashboard
 exports.getArchiveCount = async (req, res) => {
   try {
     const [result] = await db.query(

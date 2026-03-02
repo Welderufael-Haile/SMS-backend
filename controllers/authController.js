@@ -46,7 +46,7 @@ exports.login = async (req, res) => {
     // 🔹 UPDATE LAST LOGIN: Track activity
     await pool.query("UPDATE Users SET last_login = NOW() WHERE id = ?", [user.id]);
 
-    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '30m' });
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '24h' });
 
     res.cookie('token', token, {
       httpOnly: true,

@@ -22,156 +22,143 @@
     }
     return errors;
   };
-
+// 1. Get Marks with enhanced filtering and correct grade/section display
   exports.getMarks = async (req, res) => {
-    try {
-      const { search, year_id, term_id, section_id } = req.query;
+  try {
+    const { search, year_id, term_id, section_id } = req.query;
 
-      let sql = `
-        SELECT 
-          m.*, 
-          s.name AS subjects_name,
-          s.grade_level AS subjects_grade_level,
-          st.full_name AS student_name,
-          st.Sex,
-          ay.year_name AS academic_year,
-          t.term_name AS term,
-          sec.name AS section_name,
-          sec.id AS section_id,
-          e.status AS enrollment_status  -- 🔹 ADD THIS LINE HERE
-        FROM marks m
-        INNER JOIN enrollments e ON m.enrollments_id = e.id
-        INNER JOIN Student st ON e.Student_id = st.id
-        INNER JOIN subjects s ON m.subjects_id = s.id
-        INNER JOIN academic_year ay ON e.academic_year_id = ay.id
-        INNER JOIN terms t ON e.terms_id = t.id
-        INNER JOIN sections sec ON e.sections_id = sec.id
-        WHERE 1=1
-      `;
-      
-      const params = [];
+    let sql = `
+      SELECT 
+        m.*, 
+        s.name AS subjects_name,
+        s.grade_level AS subjects_grade_level,
+        st.full_name AS student_name,
+        st.Sex,  
+        ay.year_name AS academic_year,
+        t.term_name AS term,
+        sec.name AS section_name,
+        sec.grade_level AS section_grade_level,  
+        sec.id AS section_id,
+        e.status AS enrollment_status
+      FROM marks m
+      INNER JOIN enrollments e ON m.enrollments_id = e.id
+      INNER JOIN Student st ON e.Student_id = st.id  
+      INNER JOIN subjects s ON m.subjects_id = s.id
+      INNER JOIN academic_year ay ON e.academic_year_id = ay.id
+      INNER JOIN terms t ON e.terms_id = t.id
+      INNER JOIN sections sec ON e.sections_id = sec.id  
+      WHERE 1=1
+    `;
+    
+    const params = [];
 
-      // 🔹 STRICT SECTION FILTER
-      // We use e.sections_id because 'e' is the specific enrollment record for this mark
-      if (section_id && section_id !== 'undefined' && section_id !== '') {
-        sql += ` AND e.sections_id = ?`;
-        params.push(section_id);
-      }
-
-      if (year_id && year_id !== 'undefined' && year_id !== '') {
-        sql += ` AND e.academic_year_id = ?`;
-        params.push(year_id);
-      }
-
-      if (term_id && term_id !== 'undefined' && term_id !== '') {
-        sql += ` AND e.terms_id = ?`;
-        params.push(term_id);
-      }
-
-      if (search) {
-        sql += ` AND (st.full_name LIKE ? OR s.name LIKE ?)`;
-        params.push(`%${search}%`, `%${search}%`);
-      }
-
-      sql += ` ORDER BY ay.year_name DESC, t.term_name DESC, st.full_name ASC`;
-
-      const [results] = await db.execute(sql, params);
-      res.json(results);
-    } catch (err) {
-      console.error('Error fetching marks:', err);
-      res.status(500).json({ message: 'Server error' });
+    if (section_id && section_id !== 'undefined' && section_id !== '') {
+      sql += ` AND e.sections_id = ?`;
+      params.push(section_id);
     }
 
-  };
-
-  // 1. Create Mark (Robust Version)
-  exports.createMark = async (req, res) => {
-    try {
-      const { enrollment_id, subject_id, ...scores } = req.body;
-
-      // 🛡️ CRASH PROTECTION: Ensure Required IDs exist
-      if (!enrollment_id || !subject_id) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: ["Please select both a student and a subject."] 
-        });
-      }
-
-      // Validate Score Weights
-      const validationErrors = validateScores(scores);
-      if (validationErrors.length > 0) {
-        return res.status(400).json({ message: "Validation failed", errors: validationErrors });
-      }
-
-      // Check for existing mark to prevent duplicates
-      const [existing] = await db.execute(
-        `SELECT id FROM marks WHERE enrollments_id = ? AND subjects_id = ?`,
-        [enrollment_id, subject_id]
-      );
-      
-      if (existing.length > 0) {
-        return res.status(409).json({ message: 'A record already exists for this student and subject.' });
-      }
-
-      const sql = `
-        INSERT INTO marks 
-        (enrollments_id, subjects_id, st1, ws, mid_exam, project, st2, home_class_work, class_activity, final_exam) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-      
-      // Using ?? null to handle optional scores correctly
-      await db.execute(sql, [
-        enrollment_id, 
-        subject_id, 
-        scores.st1 || null, scores.ws || null, scores.mid_exam || null, scores.project || null, 
-        scores.st2 || null, scores.home_class_work || null, scores.class_activity || null, scores.final_exam || null
-      ]);
-
-      res.status(201).json({ message: "Mark created successfully" });
-    } catch (err) {
-      console.error('Create Mark Error:', err);
-      res.status(500).json({ message: 'Internal Server Error' });
+    if (year_id && year_id !== 'undefined' && year_id !== '') {
+      sql += ` AND e.academic_year_id = ?`;
+      params.push(year_id);
     }
-  };
+
+    if (term_id && term_id !== 'undefined' && term_id !== '') {
+      sql += ` AND e.terms_id = ?`;
+      params.push(term_id);
+    }
+
+    if (search) {
+      sql += ` AND (st.full_name LIKE ? OR s.name LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    sql += ` ORDER BY ay.year_name DESC, t.term_name DESC, st.full_name ASC`;
+
+    const [results] = await db.execute(sql, params);
+    
+    // ✅ Transform the results to use the correct grade/section
+    const transformedResults = results.map(row => ({
+      ...row,
+      // Use section_grade_level instead of subjects_grade_level for display
+      grade_level: row.section_grade_level,
+      // Keep subjects_grade_level for subject-specific info if needed
+    }));
+    
+    res.json(transformedResults);
+  } catch (err) {
+    console.error('Error fetching marks:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+ // 1. Create Mark (Robust Version)
+exports.createMark = async (req, res) => {
+  try {
+    const { enrollment_id, subject_id, ...scores } = req.body;
+
+    if (!enrollment_id || !subject_id) {
+      return res.status(400).json({ 
+        message: "Validation failed", 
+        errors: ["Please select both a student and a subject."] 
+      });
+    }
+
+    // ✅ Verify enrollment exists and is active
+    const [enrollmentCheck] = await db.execute(
+      `SELECT e.id, e.status, st.Sex, sec.grade_level 
+       FROM enrollments e
+       JOIN Student st ON e.student_id = st.id
+       JOIN sections sec ON e.sections_id = sec.id
+       WHERE e.id = ?`,
+      [enrollment_id]
+    );
+
+    if (enrollmentCheck.length === 0) {
+      return res.status(404).json({ message: "Enrollment not found" });
+    }
+
+    if (enrollmentCheck[0].status !== 'active') {
+      return res.status(403).json({ 
+        message: "Cannot add marks for inactive enrollment" 
+      });
+    }
+
+    // Validate Score Weights
+    const validationErrors = validateScores(scores);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ message: "Validation failed", errors: validationErrors });
+    }
+
+    // Check for existing mark
+    const [existing] = await db.execute(
+      `SELECT id FROM marks WHERE enrollments_id = ? AND subjects_id = ?`,
+      [enrollment_id, subject_id]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'A record already exists for this student and subject.' });
+    }
+
+    const sql = `
+      INSERT INTO marks 
+      (enrollments_id, subjects_id, st1, ws, mid_exam, project, st2, home_class_work, class_activity, final_exam) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    
+    await db.execute(sql, [
+      enrollment_id, 
+      subject_id, 
+      scores.st1 || null, scores.ws || null, scores.mid_exam || null, scores.project || null, 
+      scores.st2 || null, scores.home_class_work || null, scores.class_activity || null, scores.final_exam || null
+    ]);
+
+    res.status(201).json({ message: "Mark created successfully" });
+  } catch (err) {
+    console.error('Create Mark Error:', err);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
 
   // 2. Update Mark (Robust Version)
-  // exports.updateMark = async (req, res) => {
-  //   try {
-  //     const { id } = req.params;
-  //     const scores = req.body;
-
-  //     // Validate Weights if any scores were sent
-  //     const validationErrors = validateScores(scores);
-  //     if (validationErrors.length > 0) {
-  //       return res.status(400).json({ message: "Validation failed", errors: validationErrors });
-  //     }
-
-  //     const updates = [];
-  //     const params = [];
-  //     const allowedFields = Object.keys(MAX_WEIGHTS);
-
-  //     // Build dynamic query
-  //     for (const key in scores) {
-  //       if (allowedFields.includes(key)) {
-  //         updates.push(`${key} = ?`);
-  //         // If teacher clears a field, save it as NULL in the DB
-  //         params.push(scores[key] === "" || scores[key] === null ? null : scores[key]);
-  //       }
-  //     }
-
-  //     if (updates.length === 0) {
-  //       return res.status(400).json({ message: "No valid assessment fields provided to update." });
-  //     }
-
-  //     params.push(id);
-  //     const sql = `UPDATE marks SET ${updates.join(', ')} WHERE id = ?`;
-
-  //     await db.execute(sql, params);
-  //     res.json({ message: 'Mark updated successfully' });
-  //   } catch (err) {
-  //     console.error('Update Mark Error:', err);
-  //     res.status(500).json({ message: 'Internal Server Error' });
-  //   }
-  // };
 exports.updateMark = async (req, res) => {
   try {
     const { id } = req.params;
@@ -222,6 +209,7 @@ exports.updateMark = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
   // deleteMark and getDropdowns remain essentially the same but included for completeness
   exports.deleteMark = async (req, res) => {
     try {
@@ -233,35 +221,9 @@ exports.updateMark = async (req, res) => {
     }
   };
 
-  // exports.getDropdowns = async (req, res) => {
-  //   try {
-  //     const [enrollments] = await db.execute(`
-  //       SELECT 
-  //         e.id, 
-  //         e.sections_id,      -- 🔹 Needed for Section Filter
-  //         e.terms_id,         -- 🔹 Needed for Term Filter
-  //         e.academic_year_id, -- 🔹 Needed for Year Filter
-  //         st.full_name AS student_name, 
-  //         sec.name AS section_name, 
-  //         sec.grade_level,
-  //         ay.year_name, 
-  //         t.term_name
-  //       FROM enrollments e
-  //       JOIN Student st ON e.student_id = st.id
-  //       JOIN sections sec ON e.sections_id = sec.id
-  //       JOIN academic_year ay ON e.academic_year_id = ay.id
-  //       JOIN terms t ON e.terms_id = t.id
-  //       WHERE e.status = 'active'
-  //     `);
-
-  //     res.json({ enrollments }); // Keep it simple
-  //   } catch (error) {
-  //     res.status(500).json({ message: "Server error" });
-  //   }
-  // };
+ // Get dropdown data for marks form (enrollments and subjects)
 exports.getDropdowns = async (req, res) => {
   try {
-    // 1. Fetch Enrollments
     const [enrollments] = await db.execute(`
       SELECT 
         e.id, 
@@ -269,8 +231,9 @@ exports.getDropdowns = async (req, res) => {
         e.terms_id,         
         e.academic_year_id, 
         st.full_name AS student_name, 
+        st.Sex,
         sec.name AS section_name, 
-        sec.grade_level,
+        sec.grade_level AS section_grade,
         ay.year_name, 
         t.term_name
       FROM enrollments e
@@ -281,19 +244,16 @@ exports.getDropdowns = async (req, res) => {
       WHERE e.status = 'active'
     `);
 
-    // 2. Fetch Subjects (This was missing from your response!)
     const [subjects] = await db.execute(`
       SELECT id, name, grade_level FROM subjects ORDER BY grade_level, name
     `);
 
-    // 3. Send BOTH to the frontend
     res.json({ enrollments, subjects }); 
   } catch (error) {
     console.error("Dropdown fetch error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
-
   // New function to handle Excel import of marks
   exports.importMarksFromExcel = async (req, res) => {
     try {
@@ -403,3 +363,44 @@ exports.getDropdowns = async (req, res) => {
       res.status(500).json({ message: 'Critical error processing file' });
     }
   };
+
+  // Get marks statistics
+exports.getMarksStats = async (req, res) => {
+  const { academic_year_id, term_id, section_id } = req.query;
+  
+  try {
+    let sql = `
+      SELECT 
+        COUNT(DISTINCT m.enrollments_id) as total_students,
+        COUNT(DISTINCT m.subjects_id) as total_subjects,
+        AVG(m.total_score) as overall_average,
+        SUM(CASE WHEN m.total_score >= 50 THEN 1 ELSE 0 END) as passing_count,
+        SUM(CASE WHEN m.total_score < 50 THEN 1 ELSE 0 END) as failing_count,
+        MAX(m.total_score) as highest_score,
+        MIN(m.total_score) as lowest_score
+      FROM marks m
+      JOIN enrollments e ON m.enrollments_id = e.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    
+    if (academic_year_id) {
+      sql += ` AND e.academic_year_id = ?`;
+      params.push(academic_year_id);
+    }
+    if (term_id) {
+      sql += ` AND e.terms_id = ?`;
+      params.push(term_id);
+    }
+    if (section_id) {
+      sql += ` AND e.sections_id = ?`;
+      params.push(section_id);
+    }
+    
+    const [stats] = await db.execute(sql, params);
+    res.json(stats[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
