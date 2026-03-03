@@ -52,7 +52,7 @@ exports.login = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 60 * 1000 // Match JWT 30 mins
+      maxAge: 24 * 60 * 60 * 1000 // Match JWT 24h mins expiration 
     });
 
     res.json({ message: 'Login successful', user: { id: user.id, role: user.role, name: user.full_name } });

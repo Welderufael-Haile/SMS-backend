@@ -15,10 +15,12 @@ async function createStudentTable() {
         sections_id INT,
         terms_id INT,
         academic_year_id INT,
+        user_id INT UNIQUE, 
         FOREIGN KEY (parents_id) REFERENCES parents(id) ON DELETE CASCADE,
         FOREIGN KEY (sections_id) REFERENCES sections(id) ON DELETE CASCADE,
         FOREIGN KEY (terms_id) REFERENCES terms(id) ON DELETE CASCADE,
         FOREIGN KEY (academic_year_id) REFERENCES academic_year(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`;
     

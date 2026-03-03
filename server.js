@@ -15,7 +15,8 @@ const helmet = require('helmet'); // 🔹 Import Helmet for security
  const subjectsRoutes = require("./routes/subjectsRoutes");
  const parentRoutes = require('./routes/parentRoutes');
  const sectionsRoutes = require("./routes/sectionsRoutes");
- const addStudentRoutes = require("./routes/addStudentRoutes");
+ const addStudentRoutes = require("./routes/addStudentRoutes"); // for add student route and profile
+ const studentRoutes = require("./routes/studentRoutes"); // for student dashboard, marks, report card, and filters
  const studentListRoute = require("./routes/studentListRoute");
  const termRoutes = require('./routes/termRoutes'); // Import the router
  const classesRoutes = require('./routes/classesRoutes');
@@ -124,6 +125,8 @@ async function startServer() {
  app.use("/api/sections", sectionsRoutes);
  // routes for addstudents form
  app.use("/api/student", addStudentRoutes);
+ // routes for students dashboard and marks
+ app.use("/api/students", studentRoutes)
  // routes for studentList
  app.use("/api", studentListRoute);
  // classes routes
