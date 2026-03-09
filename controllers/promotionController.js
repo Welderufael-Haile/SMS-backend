@@ -466,7 +466,6 @@ exports.confirmPromotion = async (req, res) => {
 };
 
 // 3. GET TERM COMPLETION SUMMARY
-// =============================================
 exports.getTermCompletionSummary = async (req, res) => {
   const { academic_year_id, section_id } = req.query;
   

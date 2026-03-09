@@ -4,7 +4,7 @@ const ExcelJS = require('exceljs');
 
 exports.getAllEnrollments = async (req, res) => {
   try {
-    const { year, term, section, student, page = 1, limit = 30 } = req.query;
+    const { year, term, section, student, page = 1, limit = 25 } = req.query;
     const offset = (page - 1) * limit;
     
     // Count query for pagination
@@ -104,7 +104,7 @@ exports.getDropdowns = async (req, res) => {
 };
 
 
-// 3. Create (Prevent double enrollment in same term)
+// 3. manual(single student enrollment) (Prevent double enrollment in same term)
 exports.createEnrollment = async (req, res) => {
   const { student_id, academic_year_id, terms_id, sections_id } = req.body;
   try {
@@ -149,7 +149,7 @@ exports.deleteEnrollment = async (req, res) => {
   }
 };
 
-// 6. Status Toggle
+// 6. Status Toggle function
 exports.updateEnrollmentStatus = async (req, res) => {
   const { status } = req.body;
   const { id } = req.params;
@@ -292,7 +292,7 @@ exports.enrollNextTerm = async (req, res) => {
 // get archived enrollments with filters and pagination
 exports.getArchivedEnrollments = async (req, res) => {
   try {
-    const { year, term, section, student, status, page = 1, limit = 30 } = req.query;
+    const { year, term, section, student, status, page = 1, limit = 25 } = req.query;
     const offset = (page - 1) * limit;
     
     let countQuery = `

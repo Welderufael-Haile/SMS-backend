@@ -1,5 +1,5 @@
 
-// backend/controllers/studentController.js for student dashboard, marks, report card, and filters
+// backend/controllers/studentController.js for student portal, dashboard, marks, report card, and filters
 const pool = require('../config/db');
 
 
@@ -38,9 +38,6 @@ const safeParseFloat = (value, defaultValue = 0) => {
   return isNaN(parsed) ? defaultValue : parsed;
 };
 
-// =============================================
-// STUDENT CONTROLLERS
-// =============================================
 
 // Get student profile and dashboard stats
 exports.getStudentDashboard = async (req, res) => {
