@@ -26,4 +26,16 @@ router.get('/today-summary', teacherAttendanceController.getTodaySummary);
 router.get('/student/:student_id/history', teacherAttendanceController.getStudentAttendanceHistory);
 router.get('/student/:student_id/history/term/:term_id', teacherAttendanceController.getStudentAttendanceHistory);
 
+// Daily attendance report for a specific month/year
+router.get('/reports/daily', teacherAttendanceController.getDailyReport);
+
+// Monthly attendance report for a specific year
+router.get('/reports/monthly',  teacherAttendanceController.getMonthlyReport);
+
+// Yearly attendance report (term comparison)
+router.get('/reports/yearly', teacherAttendanceController.getYearlyReport);
+
+// Export reports
+router.get('/export/:type/:format',  teacherAttendanceController.exportReport);
+
 module.exports = router;
