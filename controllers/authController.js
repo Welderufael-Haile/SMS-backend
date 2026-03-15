@@ -46,7 +46,7 @@ exports.login = async (req, res) => {
     // 🔹 UPDATE LAST LOGIN: Track activity
     await pool.query("UPDATE Users SET last_login = NOW() WHERE id = ?", [user.id]);
 
-    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '24h' }); 
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -61,7 +61,11 @@ exports.login = async (req, res) => {
   }
 };
 
-// Get all users (Admin view)
+
+
+
+
+// // Get all users (Admin view)
 exports.getUsers = async (req, res) => {
   try {
     // 🔹 Fetch status and last_login for the management table

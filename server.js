@@ -3,13 +3,15 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const bodyParser = require("body-parser");
+//const bodyParser = require("body-parser");
 const db = require("./config/db");
 const cookieParser = require('cookie-parser');
+const compression  = require("compression");
+const rateLimit = require("express-rate-limit"); // 🔹 Import rate limiter
 const helmet = require('helmet'); // 🔹 Import Helmet for security
 const { Server } = require('socket.io');
 const http = require('http');
-
+const {sanitizeInput} = require("./middleware/sanitizeMiddleware");  // 
  const teacherRoutes = require('./routes/teacherRoutes'); //for add new teacher route
  const announcementsRoutes = require("./routes/announcementRoutes"); // import announcement route
  const jobPostRoutes = require("./routes/jobPostRoutes");  // for post jobs route
@@ -41,10 +43,36 @@ const http = require('http');
 
  // 1. Create HTTP server FIRST
 const server = http.createServer(app);
+
+// Middleware
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://192.168.1.34:3000",
+  "https://sms-backend-production-c9bf.up.railway.app"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+app.use(cookieParser());
+app.use(express.json());
+//app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true }));
+app.use(sanitizeInput);
 // 3. Initialize Socket.io using the HTTP server
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://192.168.1.34:3000", "https://sms-backend-production-c9bf.up.railway.app"],
+    origin:allowedOrigins ,
     credentials: true,
     methods: ["GET", "POST"]
   },
@@ -92,15 +120,23 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" } // Required to allow loading images/files
 }));
 
-// Middleware
-app.use(cors({
-  origin: ["http://localhost:3000"," http://192.168.1.34:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
-  credentials: true, // Allow cookies to be sent
-}));
+// Enable gzip compression
+app.use(compression());
 
-app.use(cookieParser());
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Prevent brute-force attacks
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: "Too many requests from this IP. Please try again later.",
+});
+
+app.use("/api", apiLimiter);
+
+
+// app.use(cors({
+//   origin: ["http://localhost:3000"," http://192.168.1.34:3000",'https://sms-backend-production-c9bf.up.railway.app'], // Adjust this to your frontend URL}));
+//   credentials: true, // Allow cookies to be sent
+// }));
 
 // Import table creation
 const { createParentsTable } = require('./models/parentTable');
