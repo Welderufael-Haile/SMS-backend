@@ -1,89 +1,46 @@
-const pool = require('../config/db');
+const AcademicYearService = require('../services/academicYearService');
 
-exports.createAcademicYear = async (req, res) => {
+exports.createAcademicYear = async (req, res, next) => {
   try {
-    const { year_name, start_date, end_date } = req.body;
-    const [result] = await pool.execute(
-      'INSERT INTO academic_year (year_name, start_date, end_date) VALUES (?, ?, ?)',
-      [year_name, start_date, end_date]
-    );
-    res.status(201).json({ id: result.insertId });
+    const newYear = await AcademicYearService.createAcademicYear(req.body);
+    res.status(201).json({ id: newYear.id });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.getAllAcademicYears = async (req, res) => {
+exports.getAllAcademicYears = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM academic_year ORDER BY start_date DESC');
-    res.json(rows);
+    const years = await AcademicYearService.getAllAcademicYears();
+    res.json(years);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.getAcademicYearById = async (req, res) => {
+exports.getAcademicYearById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const [rows] = await pool.query(
-      'SELECT * FROM academic_year WHERE id = ?',
-      [id]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Academic year not found' });
-    }
-    res.json(rows[0]);
+    const year = await AcademicYearService.getAcademicYearById(req.params.id);
+    res.json(year);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.updateAcademicYear = async (req, res) => {
+exports.updateAcademicYear = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { year_name, start_date, end_date } = req.body;
-    
-    const [result] = await pool.execute(
-      'UPDATE academic_year SET year_name = ?, start_date = ?, end_date = ? WHERE id = ?',
-      [year_name, start_date, end_date, id]
-    );
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Academic year not found' });
-    }
-    
+    await AcademicYearService.updateAcademicYear(req.params.id, req.body);
     res.json({ message: 'Academic year updated successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.deleteAcademicYear = async (req, res) => {
+exports.deleteAcademicYear = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    
-    const [terms] = await pool.query(
-      'SELECT id FROM terms WHERE academic_year_id = ?',
-      [id]
-    );
-    
-    if (terms.length > 0) {
-      return res.status(400).json({ 
-        error: 'Cannot delete academic year with associated terms. Delete the terms first.' 
-      });
-    }
-    
-    const [result] = await pool.execute(
-      'DELETE FROM academic_year WHERE id = ?',
-      [id]
-    );
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Academic year not found' });
-    }
-    
+    await AcademicYearService.deleteAcademicYear(req.params.id);
     res.json({ message: 'Academic year deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

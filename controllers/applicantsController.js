@@ -1,66 +1,28 @@
-const path = require('path');
-const fs = require('fs');
-const db = require('../config/db'); // Assume you have a db.js for MySQL connection
+const ApplicantsService = require('../services/applicantsService');
 
-exports.createApplicant = async (req, res) => {
+exports.createApplicant = async (req, res, next) => {
   try {
-    const { position, fullname, sex, email, phone } = req.body;
-    const cv = req.file ? req.file.filename : null;
-
-    if (!position || !fullname || !sex || !email || !phone || !cv) {
-      return res.status(400).json({ message: 'All fields are required.' });
-    }
-
-    // Check if email already exists
-    const [existing] = await db.query(
-      'SELECT id FROM job_applications WHERE email = ?',
-      [email]
-    );
-    if (existing.length > 0) {
-      return res.status(409).json({ message: 'This email has already been used to apply.' });
-    }
-
-    const sql = `
-      INSERT INTO job_applications (position, fullname, sex, email, phone, cv_path)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    await db.query(sql, [position, fullname, sex, email, phone, cv]);
+    await ApplicantsService.createApplicant(req.body, req.file);
     res.status(201).json({ message: 'Application submitted successfully.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.', error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-exports.getApplicants = async (req, res) => {
+exports.getApplicants = async (req, res, next) => {
   try {
-    const [rows] = await db.query('SELECT * FROM job_applications ORDER BY submitted_at DESC');
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.', error: err.message });
+    const applicants = await ApplicantsService.getApplicants();
+    res.json(applicants);
+  } catch (error) {
+    next(error);
   }
 };
 
-
-exports.deleteApplicant = async (req, res) => {
+exports.deleteApplicant = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    // Get the CV file name before deleting the record
-    const [rows] = await db.query('SELECT cv_path FROM job_applications WHERE id = ?', [id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Applicant not found.' });
-    }
-    const cvFile = rows[0].cv_path;
-    // Delete the record from DB
-    await db.query('DELETE FROM job_applications WHERE id = ?', [id]);
-    // Delete the file from uploads/cvs if it exists
-    if (cvFile) {
-      const filePath = path.join(__dirname, '../uploads/cvs', cvFile);
-      fs.unlink(filePath, (err) => {
-        // Ignore error if file doesn't exist
-      });
-    }
+    await ApplicantsService.deleteApplicant(req.params.id);
     res.json({ message: 'Applicant deleted successfully.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.', error: err.message });
+  } catch (error) {
+    next(error);
   }
 };

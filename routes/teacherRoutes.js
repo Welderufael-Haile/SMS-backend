@@ -45,7 +45,8 @@ const express = require("express");
 const router = express.Router();
 const teacherController = require("../controllers/teacherController");
 const multer = require("multer");
-const path = require("path");
+const prisma = require("../config/prisma");
+const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 
 // Set up Multer for file uploads
 const storage = multer.diskStorage({
@@ -77,80 +78,74 @@ const upload = multer({
 });
 
 // Teacher Routes
+router.get("/users/teachers", teacherController.getTeachersUsers);
 router.get("/", teacherController.getAllTeachers);
 router.get("/:id", teacherController.getTeacherById);
-router.get("/users/teachers", teacherController.getTeachersUsers); // Fixed route name
 
 // Validation middleware
 const validateTeacherData = (req, res, next) => {
-  const { email, user_id, phone_number } = req.body;
+  const { email, phone_number } = req.body;
   
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ error: "Invalid email format" });
+  if (email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
   }
   
-  // Phone validation
-  const phoneRegex = /^[0-9]{10,15}$/;
-  if (!phoneRegex.test(phone_number)) {
-    return res.status(400).json({ error: "Phone number must be 10-15 digits" });
+  if (phone_number) {
+    const phoneRegex = /^[0-9]{10,15}$/;
+    if (!phoneRegex.test(phone_number)) {
+      return res.status(400).json({ error: "Phone number must be 10-15 digits" });
+    }
   }
   
   next();
 };
 
-// Check duplicate email middleware
+// Check duplicate email middleware using Prisma
 const checkDuplicateEmail = async (req, res, next) => {
   try {
     const { email, id } = req.body;
-    const db = require("../config/db");
+    if (!email) return next();
     
-    let query = "SELECT id FROM teachers WHERE email = ?";
-    const params = [email];
+    const existing = await prisma.teachers.findFirst({
+      where: {
+        email,
+        ...(id ? { NOT: { id: parseInt(id, 10) } } : {})
+      }
+    });
     
-    if (id) {
-      query += " AND id != ?";
-      params.push(id);
-    }
-    
-    const [existing] = await db.query(query, params);
-    
-    if (existing.length > 0) {
+    if (existing) {
       return res.status(400).json({ error: "Email already exists" });
     }
     
     next();
   } catch (err) {
-    console.error("Error checking duplicate email:", err);
-    res.status(500).json({ error: "Internal server error" });
+    next(err);
   }
 };
 
-// Check duplicate user_id middleware
+// Check duplicate user_id middleware using Prisma
 const checkDuplicateUserId = async (req, res, next) => {
   try {
     const { user_id, id } = req.body;
-    const db = require("../config/db");
+    if (!user_id) return next();
     
-    let query = "SELECT id FROM teachers WHERE user_id = ?";
-    const params = [user_id];
+    const existing = await prisma.teachers.findFirst({
+      where: {
+        user_id: parseInt(user_id, 10),
+        ...(id ? { NOT: { id: parseInt(id, 10) } } : {})
+      }
+    });
     
-    if (id) {
-      query += " AND id != ?";
-      params.push(id);
-    }
-    
-    const [existing] = await db.query(query, params);
-    
-    if (existing.length > 0) {
+    if (existing) {
       return res.status(400).json({ error: "User ID already assigned to another teacher" });
     }
     
     next();
   } catch (err) {
-    console.error("Error checking duplicate user_id:", err);
-    res.status(500).json({ error: "Internal server error" });
+    next(err);
   }
 };
 

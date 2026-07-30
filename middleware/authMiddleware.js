@@ -18,7 +18,9 @@ exports.verifyToken = (req, res, next) => {
 
 exports.requireRole = (roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    const userRole = req.user?.role ? String(req.user.role).toLowerCase() : '';
+    const allowedRoles = roles.map(r => String(r).toLowerCase());
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'Access denied' });
     }
     next();

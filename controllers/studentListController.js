@@ -1,25 +1,21 @@
-const db = require("../config/db");
-exports.getAllStudentsWithSections = async (req, res) => {
-  const sql = `
-    SELECT 
-      s.id, 
-      s.Full_Name, 
-      s.Sex,
-      s.Date_of_birth, 
-      sec.name AS section_name, 
-      sec.grade_level 
-    FROM Student s
-    JOIN sections sec ON s.Section_id = sec.id
-  `;
+const prisma = require('../config/prisma');
 
+exports.getAllStudentsWithSections = async (req, res, next) => {
   try {
-    const [results] = await db.query(sql);
-    res.status(200).json(results);
-  } catch (err) {
-    console.error("Database error:", err);
-    res.status(500).json({ 
-      error: "Failed to fetch students",
-      details: err.message
+    const students = await prisma.student.findMany({
+      include: { sections: true },
+      orderBy: { full_name: 'asc' }
     });
+
+    res.status(200).json(students.map(s => ({
+      id: s.id,
+      Full_Name: s.full_name,
+      Sex: s.Sex,
+      Date_of_birth: s.Date_of_birth,
+      section_name: s.sections?.name,
+      grade_level: s.sections?.grade_level
+    })));
+  } catch (error) {
+    next(error);
   }
 };

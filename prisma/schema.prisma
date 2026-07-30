@@ -1,0 +1,350 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id                 Int                  @id @default(autoincrement())
+  full_name          String?              @db.VarChar(50)
+  profile_photo      String?              @db.VarChar(255)
+  Sex                String?              @db.VarChar(50)
+  Date_of_birth      DateTime?            @db.Date
+  parents_id         Int?
+  sections_id        Int?
+  terms_id           Int?
+  academic_year_id   Int?
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  user_id            Int?                 @unique(map: "user_id")
+  parents            parents?             @relation(fields: [parents_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Student_ibfk_1")
+  sections           sections?            @relation(fields: [sections_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Student_ibfk_2")
+  terms              terms?               @relation(fields: [terms_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Student_ibfk_3")
+  academic_year      academic_year?       @relation(fields: [academic_year_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Student_ibfk_4")
+  Users              Users?               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "Student_ibfk_5")
+  enrollments        enrollments[]
+  graduation_records graduation_records[]
+
+  @@index([academic_year_id], map: "academic_year_id")
+  @@index([parents_id], map: "parents_id")
+  @@index([sections_id], map: "sections_id")
+  @@index([terms_id], map: "terms_id")
+}
+
+model Users {
+  id         Int           @id @default(autoincrement())
+  full_name  String?       @db.VarChar(100)
+  email      String        @unique(map: "email") @db.VarChar(100)
+  password   String        @db.VarChar(255)
+  role       String        @db.VarChar(50)
+  status     Users_status? @default(active)
+  last_login DateTime?     @db.Timestamp(0)
+  created_at DateTime?     @default(now()) @db.Timestamp(0)
+  Student    Student?
+  teachers   teachers?
+}
+
+model academic_year {
+  id                       Int                        @id @default(autoincrement())
+  year_name                String                     @db.VarChar(50)
+  start_date               DateTime?                  @db.Date
+  end_date                 DateTime?                  @db.Date
+  created_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  Student                  Student[]
+  enrollments              enrollments[]
+  graduation_records       graduation_records[]
+  teacher_section_subjects teacher_section_subjects[]
+  terms                    terms[]
+}
+
+model announcements {
+  id              Int                            @id @default(autoincrement())
+  title           String                         @db.VarChar(255)
+  subtitle        String?                        @db.VarChar(255)
+  description     String                         @db.Text
+  post_time       DateTime?                      @default(now()) @db.Timestamp(0)
+  category        announcements_category?        @default(general)
+  priority        announcements_priority?        @default(medium)
+  target_audience announcements_target_audience? @default(all)
+  expiry_date     DateTime?                      @db.Date
+  is_pinned       Boolean?                       @default(false)
+  views           Int?                           @default(0)
+}
+
+model attendance {
+  id            Int                @id @default(autoincrement())
+  enrollment_id Int
+  date          DateTime           @db.Date
+  status        attendance_status? @default(present)
+  marked_by     Int?
+  remarks       String?            @db.Text
+  created_at    DateTime?          @default(now()) @db.Timestamp(0)
+  enrollments   enrollments        @relation(fields: [enrollment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attendance_ibfk_1")
+  teachers      teachers?          @relation(fields: [marked_by], references: [id], onUpdate: NoAction, map: "attendance_ibfk_2")
+
+  @@unique([enrollment_id, date], map: "unique_attendance")
+  @@index([date], map: "idx_attendance_date")
+  @@index([enrollment_id], map: "idx_attendance_enrollment")
+  @@index([status], map: "idx_attendance_status")
+  @@index([marked_by], map: "marked_by")
+}
+
+model attendance_summary {
+  id            Int         @id @default(autoincrement())
+  enrollment_id Int         @unique(map: "unique_enrollment_summary")
+  total_present Int?        @default(0)
+  total_absent  Int?        @default(0)
+  total_late    Int?        @default(0)
+  total_excused Int?        @default(0)
+  total_days    Int?        @default(0)
+  percentage    Decimal?    @default(0.00) @db.Decimal(5, 2)
+  last_updated  DateTime?   @default(now()) @db.Timestamp(0)
+  enrollments   enrollments @relation(fields: [enrollment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attendance_summary_ibfk_1")
+}
+
+model contacts {
+  id           Int       @id @default(autoincrement())
+  full_name    String    @db.VarChar(255)
+  phone_number String    @db.VarChar(20)
+  email        String    @db.VarChar(255)
+  message      String    @db.Text
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model enrollments {
+  id                 Int                 @id @default(autoincrement())
+  student_id         Int
+  academic_year_id   Int
+  terms_id           Int
+  sections_id        Int
+  status             enrollments_status? @default(active)
+  final_average      Decimal?            @db.Decimal(5, 2)
+  created_at         DateTime?           @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?           @default(now()) @db.Timestamp(0)
+  completed_at       DateTime?           @db.Timestamp(0)
+  promotion_note     String?             @db.VarChar(255)
+  attendance         attendance[]
+  attendance_summary attendance_summary?
+  Student            Student             @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "enrollments_ibfk_1")
+  academic_year      academic_year       @relation(fields: [academic_year_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "enrollments_ibfk_2")
+  terms              terms               @relation(fields: [terms_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "enrollments_ibfk_3")
+  sections           sections            @relation(fields: [sections_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "enrollments_ibfk_4")
+  marks              marks[]
+
+  @@index([academic_year_id], map: "academic_year_id")
+  @@index([sections_id], map: "sections_id")
+  @@index([student_id], map: "student_id")
+  @@index([terms_id], map: "terms_id")
+}
+
+model graduation_records {
+  id                 Int           @id @default(autoincrement())
+  student_id         Int
+  graduation_date    DateTime      @default(now()) @db.DateTime(0)
+  final_average      Decimal       @db.Decimal(5, 2)
+  academic_year_id   Int
+  terms_completed    Int?          @default(3)
+  certificate_number String?       @unique(map: "certificate_number") @db.VarChar(50)
+  created_at         DateTime?     @default(now()) @db.Timestamp(0)
+  Student            Student       @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "graduation_records_ibfk_1")
+  academic_year      academic_year @relation(fields: [academic_year_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "graduation_records_ibfk_2")
+
+  @@unique([student_id, academic_year_id], map: "unique_student_graduation")
+  @@index([academic_year_id], map: "academic_year_id")
+  @@index([student_id], map: "idx_student")
+}
+
+model job_applications {
+  id           Int       @id @default(autoincrement())
+  position     String    @db.VarChar(100)
+  Sex          String?   @db.VarChar(50)
+  fullname     String    @db.VarChar(100)
+  email        String    @db.VarChar(100)
+  phone        String    @db.VarChar(10)
+  cv_path      String    @db.VarChar(255)
+  submitted_at DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model job_posts {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(255)
+  position    String    @db.VarChar(255)
+  description String    @db.Text
+  post_time   DateTime? @default(now()) @db.Timestamp(0)
+  deadline    DateTime  @db.Date
+}
+
+model marks {
+  id              Int         @id @default(autoincrement())
+  enrollments_id  Int
+  subjects_id     Int
+  created_at      DateTime?   @default(now()) @db.Timestamp(0)
+  st1             Decimal?    @db.Decimal(5, 2)
+  ws              Decimal?    @db.Decimal(5, 2)
+  mid_exam        Decimal?    @db.Decimal(5, 2)
+  project         Decimal?    @db.Decimal(5, 2)
+  st2             Decimal?    @db.Decimal(5, 2)
+  home_class_work Decimal?    @db.Decimal(5, 2)
+  class_activity  Decimal?    @db.Decimal(5, 2)
+  final_exam      Decimal?    @db.Decimal(5, 2)
+  updated_at      DateTime?   @default(now()) @db.Timestamp(0)
+  total_score     Decimal?    @db.Decimal(5, 2)
+  enrollments     enrollments @relation(fields: [enrollments_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "marks_ibfk_1")
+  subjects        subjects    @relation(fields: [subjects_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "marks_ibfk_2")
+
+  @@index([enrollments_id], map: "enrollments_id")
+  @@index([subjects_id], map: "subjects_id")
+}
+
+model parents {
+  id           Int        @id @default(autoincrement())
+  First_Name   String     @db.VarChar(50)
+  Last_Name    String     @db.VarChar(50)
+  Sex          String     @db.VarChar(10)
+  Phone_Number String?    @db.VarChar(11)
+  Email        String?    @db.VarChar(100)
+  Address      String?    @db.VarChar(255)
+  created_at   DateTime?  @default(now()) @db.Timestamp(0)
+  Student      Student[]
+}
+
+model sections {
+  id                       Int                        @id @default(autoincrement())
+  name                     String                     @db.VarChar(50)
+  grade_level              Int
+  status                   sections_status?           @default(active)
+  created_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  Student                  Student[]
+  enrollments              enrollments[]
+  teacher_section_subjects teacher_section_subjects[]
+}
+
+
+model subjects {
+  id                       Int                        @id @default(autoincrement())
+  name                     String                     @db.VarChar(255)
+  grade_level              Int
+  created_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  marks                    marks[]
+  teacher_section_subjects teacher_section_subjects[]
+  teacher_subjects         teacher_subjects[]
+}
+
+model teacher_section_subjects {
+  id               Int           @id @default(autoincrement())
+  teacher_id       Int
+  section_id       Int
+  subject_id       Int
+  academic_year_id Int
+  is_active        Boolean?      @default(true)
+  created_at       DateTime?     @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?     @default(now()) @db.Timestamp(0)
+  sections         sections      @relation(fields: [section_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_section")
+  subjects         subjects      @relation(fields: [subject_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_subject")
+  teachers         teachers      @relation(fields: [teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_teacher")
+  academic_year    academic_year @relation(fields: [academic_year_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_year")
+
+  @@unique([teacher_id, section_id, subject_id, academic_year_id], map: "unique_teacher_section_subject_year")
+  @@index([section_id], map: "fk_tss_section")
+  @@index([subject_id], map: "fk_tss_subject")
+  @@index([academic_year_id], map: "fk_tss_year")
+}
+
+model teacher_subjects {
+  teacher_id Int
+  subject_id Int
+  teachers   teachers @relation(fields: [teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "teacher_subjects_ibfk_1")
+  subjects   subjects @relation(fields: [subject_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "teacher_subjects_ibfk_2")
+
+  @@id([teacher_id, subject_id])
+  @@index([subject_id], map: "subject_id")
+}
+
+model teachers {
+  id                       Int                        @id @default(autoincrement())
+  user_id                  Int?                       @unique(map: "user_id")
+  full_name                String?                    @db.VarChar(100)
+  email                    String?                    @db.VarChar(100)
+  gender                   String?                    @db.VarChar(10)
+  phone_number             String?                    @db.VarChar(15)
+  Subject                  String?                    @db.VarChar(100)
+  address                  String?                    @db.VarChar(255)
+  profile_photo            String?                    @db.VarChar(255)
+  degree_certificate       String?                    @db.VarChar(255)
+  created_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  updated_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  attendance               attendance[]
+  teacher_section_subjects teacher_section_subjects[]
+  teacher_subjects         teacher_subjects[]
+  Users                    Users?                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "teachers_ibfk_1")
+}
+
+model terms {
+  id               Int           @id @default(autoincrement())
+  academic_year_id Int
+  term_name        String        @db.VarChar(50)
+  start_date       DateTime?     @db.Date
+  end_date         DateTime?     @db.Date
+  created_at       DateTime?     @default(now()) @db.Timestamp(0)
+  Student          Student[]
+  enrollments      enrollments[]
+  academic_year    academic_year @relation(fields: [academic_year_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "terms_ibfk_1")
+
+  @@index([academic_year_id], map: "academic_year_id")
+}
+
+enum attendance_status {
+  present
+  absent
+  late
+  excused
+}
+
+enum sections_status {
+  active
+  inactive
+}
+
+enum Users_status {
+  active
+  inactive
+  suspended
+}
+
+enum announcements_category {
+  general
+  academic
+  event
+  holiday
+  emergency
+}
+
+enum enrollments_status {
+  active
+  promoted
+  repeated
+  completed
+}
+
+enum announcements_priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum announcements_target_audience {
+  all
+  students
+  teachers
+  parents
+}
+
+model roles {
+  id         Int       @id @default(autoincrement())
+  name       String    @unique @db.VarChar(50)
+  status     String    @default("active") @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+}

@@ -1,19 +1,13 @@
-
-// routes/announcementRoutes.js
 const express = require('express');
 const router = express.Router();
-const announcementController = require('../controllers/announcementController');
-const { verifyToken, requireRole } = require('../middleware/authMiddleware');
+const announcementsController = require('../controllers/announcementController');
 
-// Public routes (no authentication required)
-router.get('/', announcementController.getAnnouncements);
-router.get('/:id', announcementController.getAnnouncementById);
-
-// Admin only routes
-router.post('/', verifyToken, requireRole(['admin']), announcementController.createAnnouncement);
-router.put('/:id', verifyToken, requireRole(['admin']), announcementController.updateAnnouncement);
-router.delete('/:id', verifyToken, requireRole(['admin']), announcementController.deleteAnnouncement);
-router.patch('/:id/toggle-pin', verifyToken, requireRole(['admin']), announcementController.togglePin);
-router.get('/stats/overview', verifyToken, requireRole(['admin']), announcementController.getAnnouncementStats);
+router.get('/stats', announcementsController.getAnnouncementStats);
+router.get('/', announcementsController.getAnnouncements);
+router.post('/', announcementsController.createAnnouncement);
+router.get('/:id', announcementsController.getAnnouncementById);
+router.put('/:id', announcementsController.updateAnnouncement);
+router.delete('/:id', announcementsController.deleteAnnouncement);
+router.patch('/:id/pin', announcementsController.togglePin);
 
 module.exports = router;

@@ -1,101 +1,55 @@
-const pool = require('../config/db');
+const TermService = require('../services/termService');
 
-exports.createTerm = async (req, res) => {
+exports.createTerm = async (req, res, next) => {
   try {
-    const { academic_year_id, term_name, start_date, end_date } = req.body;
-
-    // Check if the term_name already exists for the same academic_year_id
-    const [existing] = await pool.query(
-      'SELECT id FROM terms WHERE academic_year_id = ? AND term_name = ?',
-      [academic_year_id, term_name]
-    );
-    if (existing.length > 0) {
-      return res.status(400).json({ error: 'This term name already exists for the selected academic year.' });
-    }
-
-    const [result] = await pool.execute(
-      'INSERT INTO terms (academic_year_id, term_name, start_date, end_date) VALUES (?, ?, ?, ?)',
-      [academic_year_id, term_name, start_date, end_date]
-    );
-    res.status(201).json({ id: result.insertId });
+    const term = await TermService.createTerm(req.body);
+    res.status(201).json(term);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.getTermsByAcademicYear = async (req, res) => {
+exports.getTermsByAcademicYear = async (req, res, next) => {
   try {
-    const { academicYearId } = req.params;
-    const [rows] = await pool.query(
-      'SELECT * FROM terms WHERE academic_year_id = ? ORDER BY start_date',
-      [academicYearId]
-    );
-    res.json(rows);
+    const terms = await TermService.getTermsByAcademicYear(req.params.academicYearId);
+    res.json(terms);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.getAllTerms = async (req, res) => {
+exports.getAllTerms = async (req, res, next) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM terms ORDER BY start_date DESC');
-    res.json(rows);
+    const terms = await TermService.getAllTerms();
+    res.json(terms);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.getTermById = async (req, res) => {
+exports.getTermById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const [rows] = await pool.query(
-      'SELECT * FROM terms WHERE id = ?',
-      [id]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Term not found' });
-    }
-    res.json(rows[0]);
+    const term = await TermService.getTermById(req.params.id);
+    res.json(term);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.updateTerm = async (req, res) => {
+exports.updateTerm = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { term_name, start_date, end_date } = req.body;
-    
-    const [result] = await pool.execute(
-      'UPDATE terms SET term_name = ?, start_date = ?, end_date = ? WHERE id = ?',
-      [term_name, start_date, end_date, id]
-    );
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Term not found' });
-    }
-    
-    res.json({ message: 'Term updated successfully' });
+    const result = await TermService.updateTerm(req.params.id, req.body);
+    res.json({ message: 'Term updated successfully', data: result });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.deleteTerm = async (req, res) => {
+exports.deleteTerm = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    
-    const [result] = await pool.execute(
-      'DELETE FROM terms WHERE id = ?',
-      [id]
-    );
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Term not found' });
-    }
-    
+    await TermService.deleteTerm(req.params.id);
     res.json({ message: 'Term deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

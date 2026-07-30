@@ -1,11 +1,10 @@
-const express = require("express");
-const { addSubject, deleteSubject, updateSubject, fetchSubjects } = require("../controllers/subjectsController.js"); // ✅ Ensure correct import
-
+const express = require('express');
 const router = express.Router();
+const subjectsController = require('../controllers/subjectsController');
 
-router.post("/add", addSubject); // ✅ Ensure addSubject is a function
-router.put("/update/:id", updateSubject); // ✅ Add update route
-router.delete("/delete/:id", deleteSubject); // ✅ Add delete route
-router.get("/fetch", fetchSubjects); // ✅ Add fetch route
+router.get('/', subjectsController.fetchSubjects);
+router.post('/', subjectsController.addSubject);
+router.put('/:id', subjectsController.updateSubject);
+router.delete('/:id', subjectsController.deleteSubject);
 
 module.exports = router;
