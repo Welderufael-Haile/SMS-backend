@@ -23,6 +23,8 @@ class TeacherAttendanceService {
       }
     });
 
+    const isHomeTeacher = assignments.some(a => a.is_home_teacher === true);
+
     const sectionIds = [...new Set(assignments.map(a => a.section_id))];
     const yearIds = [...new Set(assignments.map(a => a.academic_year_id))];
 
@@ -47,6 +49,7 @@ class TeacherAttendanceService {
 
     return {
       date: attendanceDate,
+      is_home_teacher: isHomeTeacher,
       students: enrollments.map(e => ({
         enrollment_id: e.id,
         student_id: e.student_id,
@@ -70,6 +73,9 @@ class TeacherAttendanceService {
 
     const teacher = await getTeacherByUserId(userId);
     const attendanceDate = new Date(date);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isPastDate = date < todayStr;
+    const isFutureDate = date > todayStr;
 
     const results = { total: attendance.length, success: 0, failed: 0, errors: [] };
 
@@ -88,6 +94,10 @@ class TeacherAttendanceService {
         const existing = await prisma.attendance.findFirst({
           where: { enrollment_id: parseInt(enrollment_id, 10), date: attendanceDate }
         });
+
+        if (isPastDate || isFutureDate) {
+          throw new Error("Attendance can only be taken for today.");
+        }
 
         if (existing) {
           await prisma.attendance.update({
@@ -218,10 +228,10 @@ class TeacherAttendanceService {
     };
   }
 
-  static async getTodaySummary(userId) {
+  static async getTodaySummary(userId, dateStr) {
     const teacher = await getTeacherByUserId(userId);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const targetDate = dateStr ? new Date(dateStr) : new Date();
+    targetDate.setHours(0, 0, 0, 0);
 
     const assignments = await prisma.teacher_section_subjects.findMany({
       where: { teacher_id: teacher.id, is_active: true },
@@ -239,7 +249,7 @@ class TeacherAttendanceService {
       },
       include: {
         sections: true,
-        attendance: { where: { date: today } }
+        attendance: { where: { date: targetDate } }
       }
     });
 
@@ -259,8 +269,233 @@ class TeacherAttendanceService {
     });
 
     return {
-      date: today.toISOString().split('T')[0],
+      date: targetDate.toISOString().split('T')[0],
       sections: Object.values(summaryMap)
+    };
+  }
+
+  static async _getTeacherEnrollmentsForReports(teacher, section_id, term_id) {
+    const assignments = await prisma.teacher_section_subjects.findMany({
+      where: {
+        teacher_id: teacher.id,
+        is_active: true,
+        ...(section_id ? { section_id: parseInt(section_id, 10) } : {})
+      }
+    });
+
+    const sectionIds = [...new Set(assignments.map(a => a.section_id))];
+    if (sectionIds.length === 0) return [];
+
+    const enrollments = await prisma.enrollments.findMany({
+      where: {
+        sections_id: { in: sectionIds },
+        status: 'active',
+        ...(term_id ? { terms_id: parseInt(term_id, 10) } : {})
+      },
+      include: {
+        attendance: true,
+        terms: true,
+        academic_year: true
+      }
+    });
+    
+    return enrollments;
+  }
+
+  static async getDailyReport(userId, query) {
+    const { section_id, term_id, month, year } = query;
+    const teacher = await getTeacherByUserId(userId);
+    const enrollments = await this._getTeacherEnrollmentsForReports(teacher, section_id, term_id);
+    
+    const targetMonth = month ? parseInt(month, 10) - 1 : new Date().getMonth();
+    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
+
+    const dailyData = {};
+    let totalStudents = enrollments.length;
+
+    enrollments.forEach(enrollment => {
+      enrollment.attendance.forEach(att => {
+        const d = new Date(att.date);
+        if (d.getMonth() === targetMonth && d.getFullYear() === targetYear) {
+          const dateStr = d.toISOString().split('T')[0];
+          if (!dailyData[dateStr]) {
+            dailyData[dateStr] = {
+              date: dateStr,
+              day: d.toLocaleDateString('en-US', { weekday: 'long' }),
+              presentCount: 0,
+              absentCount: 0,
+              lateCount: 0,
+              excusedCount: 0,
+              total: 0
+            };
+          }
+          
+          dailyData[dateStr].total++;
+          if (att.status === 'present') dailyData[dateStr].presentCount++;
+          else if (att.status === 'absent') dailyData[dateStr].absentCount++;
+          else if (att.status === 'late') dailyData[dateStr].lateCount++;
+          else if (att.status === 'excused') dailyData[dateStr].excusedCount++;
+        }
+      });
+    });
+
+    const chartData = Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
+    let overallTotal = 0;
+    let overallPresent = 0;
+
+    chartData.forEach(day => {
+      day.present = day.total > 0 ? Math.round((day.presentCount / day.total) * 100) : 0;
+      day.absent = day.total > 0 ? Math.round((day.absentCount / day.total) * 100) : 0;
+      day.late = day.total > 0 ? Math.round((day.lateCount / day.total) * 100) : 0;
+      
+      overallTotal += day.total;
+      overallPresent += day.presentCount;
+    });
+
+    const average = overallTotal > 0 ? Math.round((overallPresent / overallTotal) * 100) : 0;
+
+    return {
+      totalStudents,
+      average,
+      chartData
+    };
+  }
+
+  static async getMonthlyReport(userId, query) {
+    const { section_id, term_id, year } = query;
+    const teacher = await getTeacherByUserId(userId);
+    const enrollments = await this._getTeacherEnrollmentsForReports(teacher, section_id, term_id);
+    
+    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    const monthlyData = {};
+    
+    enrollments.forEach(enrollment => {
+      enrollment.attendance.forEach(att => {
+        const d = new Date(att.date);
+        if (d.getFullYear() === targetYear) {
+          const monthIdx = d.getMonth();
+          const monthName = months[monthIdx];
+          
+          if (!monthlyData[monthName]) {
+            monthlyData[monthName] = {
+              month: monthName,
+              monthIdx,
+              presentCount: 0,
+              absentCount: 0,
+              lateCount: 0,
+              excusedCount: 0,
+              totalRecords: 0,
+              uniqueDates: new Set()
+            };
+          }
+          
+          monthlyData[monthName].totalRecords++;
+          monthlyData[monthName].uniqueDates.add(d.toISOString().split('T')[0]);
+          
+          if (att.status === 'present') monthlyData[monthName].presentCount++;
+          else if (att.status === 'absent') monthlyData[monthName].absentCount++;
+          else if (att.status === 'late') monthlyData[monthName].lateCount++;
+          else if (att.status === 'excused') monthlyData[monthName].excusedCount++;
+        }
+      });
+    });
+
+    const chartData = Object.values(monthlyData).sort((a, b) => a.monthIdx - b.monthIdx);
+    
+    let overallTotal = 0;
+    let overallPresent = 0;
+
+    chartData.forEach(m => {
+      m.totalDays = m.uniqueDates.size;
+      m.present = m.totalRecords > 0 ? Math.round((m.presentCount / m.totalRecords) * 100) : 0;
+      m.absent = m.totalRecords > 0 ? Math.round((m.absentCount / m.totalRecords) * 100) : 0;
+      m.late = m.totalRecords > 0 ? Math.round((m.lateCount / m.totalRecords) * 100) : 0;
+      
+      overallTotal += m.totalRecords;
+      overallPresent += m.presentCount;
+    });
+    
+    const serializableChartData = chartData.map(m => {
+      const { uniqueDates, monthIdx, ...rest } = m;
+      return rest;
+    });
+
+    const average = overallTotal > 0 ? Math.round((overallPresent / overallTotal) * 100) : 0;
+
+    return {
+      totalDays: serializableChartData.reduce((sum, m) => sum + m.totalDays, 0),
+      average,
+      chartData: serializableChartData
+    };
+  }
+
+  static async getYearlyReport(userId, query) {
+    // We ignore term_id so we get all terms for the year comparison
+    const { section_id } = query; 
+    const teacher = await getTeacherByUserId(userId);
+    const enrollments = await this._getTeacherEnrollmentsForReports(teacher, section_id, null);
+    
+    const yearlyData = {};
+    
+    enrollments.forEach(enrollment => {
+      const termName = enrollment.terms?.term_name || 'Unknown Term';
+      const yearName = enrollment.academic_year?.year_name || 'Unknown Year';
+      const key = `${termName}-${yearName}`;
+      
+      if (!yearlyData[key]) {
+        yearlyData[key] = {
+          term: termName,
+          year: yearName,
+          presentCount: 0,
+          absentCount: 0,
+          lateCount: 0,
+          excusedCount: 0,
+          totalRecords: 0,
+          uniqueDates: new Set()
+        };
+      }
+      
+      enrollment.attendance.forEach(att => {
+        const d = new Date(att.date);
+        
+        yearlyData[key].totalRecords++;
+        yearlyData[key].uniqueDates.add(d.toISOString().split('T')[0]);
+        
+        if (att.status === 'present') yearlyData[key].presentCount++;
+        else if (att.status === 'absent') yearlyData[key].absentCount++;
+        else if (att.status === 'late') yearlyData[key].lateCount++;
+        else if (att.status === 'excused') yearlyData[key].excusedCount++;
+      });
+    });
+
+    const chartData = Object.values(yearlyData).filter(t => t.totalRecords > 0);
+    
+    let overallTotal = 0;
+    let overallPresent = 0;
+
+    chartData.forEach(t => {
+      t.totalDays = t.uniqueDates.size;
+      t.present = t.totalRecords > 0 ? Math.round((t.presentCount / t.totalRecords) * 100) : 0;
+      t.absent = t.totalRecords > 0 ? Math.round((t.absentCount / t.totalRecords) * 100) : 0;
+      t.late = t.totalRecords > 0 ? Math.round((t.lateCount / t.totalRecords) * 100) : 0;
+      
+      overallTotal += t.totalRecords;
+      overallPresent += t.presentCount;
+    });
+    
+    const serializableChartData = chartData.map(t => {
+      const { uniqueDates, ...rest } = t;
+      return rest;
+    });
+
+    const average = overallTotal > 0 ? Math.round((overallPresent / overallTotal) * 100) : 0;
+
+    return {
+      totalTerms: serializableChartData.length,
+      average,
+      chartData: serializableChartData
     };
   }
 }

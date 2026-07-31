@@ -12,6 +12,7 @@ class TeacherSectionSubjectService {
     const section_id = toNum(data.section_id);
     const subject_id = toNum(data.subject_id);
     const academic_year_id = toNum(data.academic_year_id);
+    const is_home_teacher = data.is_home_teacher === true;
 
     if (!teacher_id || !section_id || !subject_id || !academic_year_id) {
       throw new BadRequestError("teacher_id, section_id, subject_id and academic_year_id are required");
@@ -46,7 +47,7 @@ class TeacherSectionSubjectService {
     });
 
     return await prisma.teacher_section_subjects.create({
-      data: { teacher_id, section_id, subject_id, academic_year_id }
+      data: { teacher_id, section_id, subject_id, academic_year_id, is_home_teacher }
     });
   }
 
@@ -71,7 +72,8 @@ class TeacherSectionSubjectService {
       subject: a.subjects?.name,
       academic_year_id: a.academic_year_id,
       academic_year: a.academic_year?.year_name,
-      is_active: a.is_active
+      is_active: a.is_active,
+      is_home_teacher: a.is_home_teacher
     }));
   }
 
@@ -96,7 +98,8 @@ class TeacherSectionSubjectService {
       subject: a.subjects?.name,
       academic_year_id: a.academic_year_id,
       academic_year: a.academic_year?.year_name,
-      is_active: a.is_active
+      is_active: a.is_active,
+      is_home_teacher: a.is_home_teacher
     };
   }
 
@@ -106,6 +109,7 @@ class TeacherSectionSubjectService {
     const section_id = toNum(data.section_id);
     const subject_id = toNum(data.subject_id);
     const academic_year_id = toNum(data.academic_year_id);
+    const is_home_teacher = data.is_home_teacher === true;
 
     if (!assignmentId || !teacher_id || !section_id || !subject_id || !academic_year_id) {
       throw new BadRequestError("All fields are required");
@@ -132,7 +136,7 @@ class TeacherSectionSubjectService {
     try {
       return await prisma.teacher_section_subjects.update({
         where: { id: assignmentId },
-        data: { teacher_id, section_id, subject_id, academic_year_id, is_active: true }
+        data: { teacher_id, section_id, subject_id, academic_year_id, is_home_teacher, is_active: true }
       });
     } catch (err) {
       if (err.code === 'P2025') throw new NotFoundError("Assignment not found");

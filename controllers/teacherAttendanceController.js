@@ -55,7 +55,7 @@ exports.getStudentAttendanceHistory = async (req, res, next) => {
 
 exports.getTodaySummary = async (req, res, next) => {
   try {
-    const data = await TeacherAttendanceService.getTodaySummary(req.user?.id);
+    const data = await TeacherAttendanceService.getTodaySummary(req.user?.id, req.query.date);
     res.json(data);
   } catch (error) {
     next(error);
@@ -64,7 +64,8 @@ exports.getTodaySummary = async (req, res, next) => {
 
 exports.getDailyReport = async (req, res, next) => {
   try {
-    res.json({ summary: {}, chartData: [] });
+    const data = await TeacherAttendanceService.getDailyReport(req.user?.id, req.query);
+    res.json(data);
   } catch (error) {
     next(error);
   }
@@ -72,7 +73,8 @@ exports.getDailyReport = async (req, res, next) => {
 
 exports.getMonthlyReport = async (req, res, next) => {
   try {
-    res.json({ summary: {}, chartData: [] });
+    const data = await TeacherAttendanceService.getMonthlyReport(req.user?.id, req.query);
+    res.json(data);
   } catch (error) {
     next(error);
   }
@@ -80,7 +82,8 @@ exports.getMonthlyReport = async (req, res, next) => {
 
 exports.getYearlyReport = async (req, res, next) => {
   try {
-    res.json({ summary: {}, chartData: [] });
+    const data = await TeacherAttendanceService.getYearlyReport(req.user?.id, req.query);
+    res.json(data);
   } catch (error) {
     next(error);
   }

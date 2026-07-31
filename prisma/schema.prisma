@@ -239,6 +239,7 @@ model teacher_section_subjects {
   subject_id       Int
   academic_year_id Int
   is_active        Boolean?      @default(true)
+  is_home_teacher  Boolean?      @default(false)
   created_at       DateTime?     @default(now()) @db.Timestamp(0)
   updated_at       DateTime?     @default(now()) @db.Timestamp(0)
   sections         sections      @relation(fields: [section_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_section")
