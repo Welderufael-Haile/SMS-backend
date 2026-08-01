@@ -28,18 +28,22 @@ class ParentService {
       throw new BadRequestError('First name, last name, and sex are required');
     }
 
-    const existing = await prisma.parents.findFirst({
-      where: {
-        OR: [
-          ...(Email ? [{ Email }] : []),
-          ...(Phone_Number ? [{ Phone_Number }] : [])
-        ]
-      }
-    });
+    const orConditions = [
+      ...(Email ? [{ Email }] : []),
+      ...(Phone_Number ? [{ Phone_Number }] : [])
+    ];
 
-    if (existing) {
-      const isEmailMatch = existing.Email === Email;
-      throw new BadRequestError(isEmailMatch ? 'Email already exists' : 'Phone number already exists');
+    if (orConditions.length > 0) {
+      const existing = await prisma.parents.findFirst({
+        where: {
+          OR: orConditions
+        }
+      });
+
+      if (existing) {
+        const isEmailMatch = Email && existing.Email === Email;
+        throw new BadRequestError(isEmailMatch ? 'Email already exists' : 'Phone number already exists');
+      }
     }
 
     return await prisma.parents.create({
@@ -58,18 +62,22 @@ class ParentService {
     const parentId = parseInt(id, 10);
     const { First_Name, Last_Name, Sex, Phone_Number, Email, Address } = data;
 
-    const duplicate = await prisma.parents.findFirst({
-      where: {
-        id: { not: parentId },
-        OR: [
-          ...(Email ? [{ Email }] : []),
-          ...(Phone_Number ? [{ Phone_Number }] : [])
-        ]
-      }
-    });
+    const orConditions = [
+      ...(Email ? [{ Email }] : []),
+      ...(Phone_Number ? [{ Phone_Number }] : [])
+    ];
 
-    if (duplicate) {
-      throw new BadRequestError('Email or Phone Number is already taken by another parent');
+    if (orConditions.length > 0) {
+      const duplicate = await prisma.parents.findFirst({
+        where: {
+          id: { not: parentId },
+          OR: orConditions
+        }
+      });
+
+      if (duplicate) {
+        throw new BadRequestError('Email or Phone Number is already taken by another parent');
+      }
     }
 
     try {
