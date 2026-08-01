@@ -39,6 +39,7 @@ const graduationRoutes = require("./routes/graduationRoutes");
 const attendanceRoutes = require("./routes/teacherAttendanceRoutes"); // routes for teacher attendance marking and summary
 const studentAttendance = require("./routes/studentAttendanceRoutes"); // routes for student attendance history and summary
 const adminAttendanceRoutes = require("./routes/adminAttendanceRoutes"); // routes for admin attendance dashboard and report export
+const messageRoutes = require("./routes/messageRoutes"); // routes for chat messages
 const app = express();
 
 // 1. Create HTTP server FIRST
@@ -111,6 +112,43 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('🔴 Client disconnected:', socket.id);
   });
+
+  // --- Chat Application Socket Logic ---
+  socket.on('join_chat', (userId) => {
+    socket.join(`user_${userId}`);
+    socket.broadcast.emit('user_online', { userId });
+  });
+
+  socket.on('typing', (data) => {
+    socket.to(`user_${data.receiverId}`).emit('user_typing', {
+      senderId: data.senderId,
+      isTyping: data.isTyping
+    });
+  });
+
+  socket.on('mark_as_read', async (data) => {
+    try {
+      const prisma = require('./config/prisma');
+      await prisma.messages.updateMany({
+        where: {
+          senderId: parseInt(data.senderId, 10),
+          receiverId: parseInt(data.receiverId, 10), // receiverId is usually the current user socket
+          isRead: false
+        },
+        data: {
+          isRead: true,
+          readAt: new Date()
+        }
+      });
+      socket.to(`user_${data.senderId}`).emit('messages_read', {
+        receiverId: parseInt(data.receiverId, 10),
+        readAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error marking messages as read via socket:', error);
+    }
+  });
+  // -------------------------------------
 
   // Handle errors
   socket.on('error', (error) => {
@@ -229,6 +267,8 @@ async function startServer() {
     app.use("/api/student/attendance", studentAttendance);
     // routes for admin attendance dashboard and report export
     app.use('/api/admin/attendance', adminAttendanceRoutes);
+    // routes for chat messages
+    app.use('/api/messages', messageRoutes);
 
     //  Serve uploaded files
     app.use("/uploads", express.static(path.join(__dirname, "uploads")));

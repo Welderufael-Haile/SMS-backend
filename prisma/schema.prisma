@@ -44,6 +44,8 @@ model Users {
   created_at DateTime?     @default(now()) @db.Timestamp(0)
   Student    Student?
   teachers   teachers?
+  sentMessages     messages[] @relation("MessageSender")
+  receivedMessages messages[] @relation("MessageReceiver")
 }
 
 model academic_year {
@@ -348,4 +350,35 @@ model roles {
   name       String    @unique @db.VarChar(50)
   status     String    @default("active") @db.VarChar(20)
   created_at DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model messages {
+  id          Int       @id @default(autoincrement())
+  content     String    @db.Text
+  senderId    Int
+  receiverId  Int
+  isRead      Boolean   @default(false)
+  isDelivered Boolean   @default(false)
+  readAt      DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // file fields
+  fileUrl     String?   @db.VarChar(255)
+  fileType    String?   @db.VarChar(50)
+  fileName    String?   @db.VarChar(255)
+
+  // soft delete
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  deletedBySender   Boolean   @default(false)
+  deletedByReceiver Boolean   @default(false)
+
+  // Relations
+  sender      Users     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    Users     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId], map: "idx_sender")
+  @@index([receiverId], map: "idx_receiver")
 }
