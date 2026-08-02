@@ -52,14 +52,22 @@ const allowedOrigins = [
   "http://localhost:5000",
   "http://127.0.0.1:5000",
   "http://192.168.1.34:3000",
-  "https://sms-backend-production-c9bf.up.railway.app"
-];
+  "https://sms-backend-production-c9bf.up.railway.app",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(
   cors({
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps, curl, postman, or same-origin Swagger)
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      const isAllowed = !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        origin.endsWith('.netlify.app') ||
+        process.env.NODE_ENV !== 'production';
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error("CORS not allowed"));
@@ -74,6 +82,10 @@ app.use(express.json());
 //app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(sanitizeInput);
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'sms-backend' });
+});
 // 3. Initialize Socket.io using the HTTP server
 const io = new Server(server, {
   cors: {
@@ -303,4 +315,8 @@ async function startServer() {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, server, startServer };
