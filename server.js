@@ -200,8 +200,8 @@ async function startServer() {
     await prisma.$connect();
     console.log(" Database connected via Prisma ORM");
 
-    // Initialize core roles
-    if (prisma.roles) {
+    // Initialize core roles safely
+    try {
       const coreRoles = ['admin', 'teacher', 'student', 'parents'];
       for (const roleName of coreRoles) {
         await prisma.roles.upsert({
@@ -211,8 +211,8 @@ async function startServer() {
         });
       }
       console.log(" Core roles verified in DB");
-    } else {
-      console.warn("⚠️ prisma.roles is not available yet. Please run 'npx prisma db push' to generate the client.");
+    } catch (roleError) {
+      console.warn("⚠️ Could not initialize roles table yet:", roleError.message);
     }
 
     // Setup Swagger UI documentation
