@@ -3,7 +3,7 @@ services:
     name: sms-backend
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build && npm run db:push
+    buildCommand: npm install && npm run build && npm run db:push && npm run seed
     startCommand: npm start
     healthCheckPath: /health
     autoDeploy: true

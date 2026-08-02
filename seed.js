@@ -1,110 +1,103 @@
 require("dotenv").config();
 const bcrypt = require("bcryptjs");
-const db = require("./config/db");
+const prisma = require("./config/prisma");
 
 async function seed() {
   try {
     console.log("🌱 Starting database seeding...");
+    await prisma.$connect();
 
     /* ===================== USERS ===================== */
     const adminEmail = "admin@school.com";
+    let admin = await prisma.users.findUnique({
+      where: { email: adminEmail },
+    });
 
-    const [existingAdmin] = await db.query(
-      "SELECT id FROM Users WHERE email = ?",
-      [adminEmail]
-    );
-
-    let adminId;
-
-    if (existingAdmin.length === 0) {
+    if (!admin) {
       const hashedPassword = await bcrypt.hash("admin123", 10);
-
-      const [result] = await db.query(
-        `INSERT INTO Users (full_name, email, password, role)
-         VALUES (?, ?, ?, ?)`,
-        ["System Admin", adminEmail, hashedPassword, "admin"]
-      );
-
-      adminId = result.insertId;
+      admin = await prisma.users.create({
+        data: {
+          full_name: "System Admin",
+          email: adminEmail,
+          password: hashedPassword,
+          role: "admin",
+          status: "active",
+        },
+      });
       console.log("✅ Admin user seeded");
     } else {
-      adminId = existingAdmin[0].id;
       console.log("ℹ️ Admin user already exists");
     }
 
     /* ===================== TEACHERS ===================== */
-    const [teacherCheck] = await db.query(
-      "SELECT id FROM teachers WHERE email = ?",
-      ["teacher@school.com"]
-    );
+    const teacherExists = await prisma.teachers.findFirst({
+      where: { email: "teacher@school.com" },
+    });
 
-    if (teacherCheck.length === 0) {
-      await db.query(
-        `INSERT INTO teachers
-        (user_id, full_name, email, gender, phone_number, Subject, address)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          adminId,
-          "John Doe",
-          "teacher@school.com",
-          "Male",
-          "0912345678",
-          "Mathematics",
-          "Addis Ababa",
-        ]
-      );
-
+    if (!teacherExists) {
+      await prisma.teachers.create({
+        data: {
+          user_id: admin.id,
+          full_name: "John Doe",
+          email: "teacher@school.com",
+          gender: "Male",
+          phone_number: "0912345678",
+          Subject: "Mathematics",
+          address: "Addis Ababa",
+        },
+      });
       console.log("✅ Teacher seeded");
     } else {
       console.log("ℹ️ Teacher already exists");
     }
 
     /* ===================== PARENTS ===================== */
-    const [parentCheck] = await db.query(
-      "SELECT id FROM parents WHERE Email = ?",
-      ["parent@school.com"]
-    );
+    const parentExists = await prisma.parents.findFirst({
+      where: { Email: "parent@school.com" },
+    });
 
-    if (parentCheck.length === 0) {
-      await db.query(
-        `INSERT INTO parents
-        (First_Name, Last_Name, Sex, Phone_Number, Email, Address)
-        VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          "Abebe",
-          "Kebede",
-          "Male",
-          "0911111111",
-          "parent@school.com",
-          "Bole, Addis Ababa",
-        ]
-      );
-
+    if (!parentExists) {
+      await prisma.parents.create({
+        data: {
+          First_Name: "Abebe",
+          Last_Name: "Kebede",
+          Sex: "Male",
+          Phone_Number: "0911111111",
+          Email: "parent@school.com",
+          Address: "Bole, Addis Ababa",
+        },
+      });
       console.log("✅ Parent seeded");
     } else {
       console.log("ℹ️ Parent already exists");
     }
 
     /* ===================== CONTACTS ===================== */
-    await db.query(
-      `INSERT INTO contacts
-      (full_name, phone_number, email, message)
-      VALUES (?, ?, ?, ?)`,
-      [
-        "Website Visitor",
-        "0922222222",
-        "visitor@gmail.com",
-        "I would like more information about the school.",
-      ]
-    );
+    const contactExists = await prisma.contacts.findFirst({
+      where: { email: "visitor@gmail.com" },
+    });
 
-    console.log("✅ Contact message seeded");
+    if (!contactExists) {
+      await prisma.contacts.create({
+        data: {
+          full_name: "Website Visitor",
+          phone_number: "0922222222",
+          email: "visitor@gmail.com",
+          message: "I would like more information about the school.",
+        },
+      });
+      console.log("✅ Contact message seeded");
+    } else {
+      console.log("ℹ️ Contact message already exists");
+    }
 
     console.log("🎉 Database seeding completed successfully");
     process.exit(0);
   } catch (error) {
     console.error("❌ Seeding failed:", error.message);
     process.exit(1);
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
