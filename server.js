@@ -42,6 +42,10 @@ const adminAttendanceRoutes = require("./routes/adminAttendanceRoutes"); // rout
 const messageRoutes = require("./routes/messageRoutes"); // routes for chat messages
 const app = express();
 
+// Trust proxy headers when running behind Render or other reverse proxies.
+// This is required so express-rate-limit can read X-Forwarded-For correctly.
+app.set('trust proxy', 1);
+
 // 1. Create HTTP server FIRST
 const server = http.createServer(app);
 
