@@ -12,6 +12,7 @@ const getChatUsers = async (currentUserId) => {
       id: true,
       full_name: true,
       role: true,
+      last_login: true,
     },
     orderBy: { full_name: 'asc' },
   });

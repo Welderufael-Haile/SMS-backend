@@ -105,6 +105,8 @@ const io = new Server(server, {
 app.set('socketio', io);
 
 
+const onlineUsersMap = new Map();
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('🟢 New client connected:', socket.id);
@@ -125,14 +127,36 @@ io.on('connection', (socket) => {
   });
 
   // Handle disconnection
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log('🔴 Client disconnected:', socket.id);
+    if (socket.userId) {
+      onlineUsersMap.delete(socket.userId);
+      socket.broadcast.emit('user_offline', { userId: socket.userId });
+
+      try {
+        const prisma = require('./config/prisma');
+        await prisma.users.update({
+          where: { id: parseInt(socket.userId, 10) },
+          data: { last_login: new Date() }
+        });
+      } catch (err) {
+        console.error('Failed to update last seen:', err.message);
+      }
+    }
   });
 
   // --- Chat Application Socket Logic ---
   socket.on('join_chat', (userId) => {
+    socket.userId = userId;
+    onlineUsersMap.set(userId, socket.id);
     socket.join(`user_${userId}`);
     socket.broadcast.emit('user_online', { userId });
+    
+    const activeUsers = {};
+    for (const [id] of onlineUsersMap) {
+      activeUsers[id] = true;
+    }
+    socket.emit('online_users', activeUsers);
   });
 
   socket.on('typing', (data) => {
