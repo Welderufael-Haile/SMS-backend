@@ -168,6 +168,10 @@ io.on('connection', (socket) => {
 
   socket.on('mark_as_read', async (data) => {
     try {
+      if (!data || !data.senderId || !data.receiverId) {
+        return; // Missing necessary IDs
+      }
+
       const prisma = require('./config/prisma');
       await prisma.messages.updateMany({
         where: {
