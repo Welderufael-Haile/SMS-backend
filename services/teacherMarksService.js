@@ -316,56 +316,140 @@ class TeacherMarksService {
       where: { teacher_id: teacher.id, is_active: true }
     });
 
-    const sectionIds = assignments.map(a => a.section_id);
-    const yearIds = assignments.map(a => a.academic_year_id);
+    if (assignments.length === 0) {
+      return { homeTeacher: null, subjectTeacher: null };
+    }
 
-    const orConditions = assignments.length > 0 ? assignments.map(a => {
-      if (a.is_home_teacher) {
-        return {
-          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' }
-        };
-      } else {
-        return {
-          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' },
-          subjects_id: a.subject_id
-        };
-      }
-    }) : [{ id: -1 }];
+    const currentYearId = Math.max(...assignments.map(a => a.academic_year_id));
+    const currentAssignments = assignments.filter(a => a.academic_year_id === currentYearId);
+    
+    const homeAssignments = currentAssignments.filter(a => a.is_home_teacher);
+    const subjectAssignments = currentAssignments.filter(a => !a.is_home_teacher);
 
-    const marks = await prisma.marks.findMany({
-      where: {
-        OR: orConditions
-      },
-      include: {
-        enrollments: {
-          include: { Student: true, sections: true, terms: true, academic_year: true }
+    const homeConditions = homeAssignments.map(a => ({
+      enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' }
+    }));
+    
+    const subjectConditions = subjectAssignments.map(a => ({
+      enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' },
+      subjects_id: a.subject_id
+    }));
+
+    const fetchMarks = async (conditions) => {
+      if (conditions.length === 0) return [];
+      return await prisma.marks.findMany({
+        where: { OR: conditions },
+        include: {
+          subjects: true,
+          enrollments: {
+            include: { Student: true, sections: true }
+          }
         }
-      }
-    });
-
-    const uniqueStudents = new Set(marks.map(m => m.enrollments?.student_id));
-    const scores = marks.map(m => parseFloat(m.total_score)).filter(s => !isNaN(s));
-    const failingMarks = marks.filter(m => (parseFloat(m.total_score) || 0) < 50);
-
-    const getGender = (g) => {
-      const gender = g?.toLowerCase();
-      if (gender === 'male' || gender === 'm') return 'male';
-      if (gender === 'female' || gender === 'f') return 'female';
-      return 'other';
+      });
     };
 
-    const uniqueFailingStudents = new Set(failingMarks.map(m => m.enrollments?.student_id));
+    const homeMarks = await fetchMarks(homeConditions);
+    const subjectMarks = await fetchMarks(subjectConditions);
+
+    const processMarks = (marksList) => {
+      if (!marksList || marksList.length === 0) return null;
+      
+      let above50 = 0;
+      let below50 = 0;
+      const below50List = [];
+      const students = new Set();
+
+      let failingMale = 0;
+      let failingFemale = 0;
+      
+      const sections = {};
+      const termYears = {};
+
+      const scores = marksList.map(m => parseFloat(m.total_score)).filter(s => !isNaN(s));
+      const failingMarks = marksList.filter(m => (parseFloat(m.total_score) || 0) < 50);
+      const uniqueFailingStudents = new Set();
+      
+      const getGender = (g) => {
+        const gender = g?.toLowerCase();
+        if (gender === 'male' || gender === 'm') return 'male';
+        if (gender === 'female' || gender === 'f') return 'female';
+        return 'other';
+      };
+      
+      marksList.forEach(m => {
+        students.add(m.enrollments?.student_id);
+        const score = parseFloat(m.total_score) || 0;
+        if (score >= 50) {
+          above50++;
+        } else {
+          below50++;
+          below50List.push({
+            id: m.id,
+            studentName: m.enrollments?.Student?.full_name || 'Unknown',
+            section: `${m.enrollments?.sections?.grade_level || ''}${m.enrollments?.sections?.name || ''}`,
+            subject: m.subjects?.name || 'Unknown',
+            score: score
+          });
+        }
+      });
+
+      failingMarks.forEach(m => {
+        const studentId = m.enrollments?.student_id;
+        const gender = getGender(m.enrollments?.Student?.Sex);
+        const secName = `${m.enrollments?.sections?.grade_level || ''}${m.enrollments?.sections?.name || ''}`;
+        
+        if (!uniqueFailingStudents.has(studentId)) {
+          uniqueFailingStudents.add(studentId);
+          if (gender === 'male') failingMale++;
+          if (gender === 'female') failingFemale++;
+        }
+
+        if (!sections[secName]) {
+          sections[secName] = { failing: { male: 0, female: 0, total: 0, _students: new Set() } };
+        }
+        if (!sections[secName].failing._students.has(studentId)) {
+          sections[secName].failing._students.add(studentId);
+          sections[secName].failing.total++;
+          if (gender === 'male') sections[secName].failing.male++;
+          if (gender === 'female') sections[secName].failing.female++;
+        }
+
+        const termName = `${m.enrollments?.terms?.term_name || ''} - ${m.enrollments?.academic_year?.year_name || ''}`;
+        if (!termYears[termName]) {
+          termYears[termName] = { failing: { male: 0, female: 0, total: 0, _students: new Set() } };
+        }
+        if (!termYears[termName].failing._students.has(studentId)) {
+          termYears[termName].failing._students.add(studentId);
+          termYears[termName].failing.total++;
+          if (gender === 'male') termYears[termName].failing.male++;
+          if (gender === 'female') termYears[termName].failing.female++;
+        }
+      });
+
+      Object.values(sections).forEach(s => delete s.failing._students);
+      Object.values(termYears).forEach(t => delete t.failing._students);
+      
+      return {
+        totalStudents: students.size,
+        totalMarks: marksList.length,
+        averageScore: scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : 0,
+        passingRate: marksList.length > 0 ? ((above50 / marksList.length) * 100).toFixed(2) : 0,
+        failingStudents: {
+          male: failingMale,
+          female: failingFemale,
+          total: uniqueFailingStudents.size
+        },
+        sections,
+        termYears,
+        above50,
+        below50,
+        below50List: below50List.sort((a, b) => a.score - b.score)
+      };
+    };
 
     return {
-      totalStudents: uniqueStudents.size,
-      totalMarks: marks.length,
-      averageScore: scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : 0,
-      passingRate: marks.length > 0 ? ((marks.filter(m => (parseFloat(m.total_score) || 0) >= 50).length / marks.length) * 100).toFixed(2) : 0,
-      failingStudents: {
-        male: [...new Set(failingMarks.filter(m => getGender(m.enrollments?.Student?.Sex) === 'male').map(m => m.enrollments?.student_id))].length,
-        female: [...new Set(failingMarks.filter(m => getGender(m.enrollments?.Student?.Sex) === 'female').map(m => m.enrollments?.student_id))].length,
-        total: uniqueFailingStudents.size
-      }
+      homeTeacher: processMarks(homeMarks),
+      subjectTeacher: processMarks(subjectMarks)
     };
   }
 }
