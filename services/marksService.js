@@ -115,18 +115,21 @@ class MarksService {
       throw new BadRequestError('A record already exists for this student and subject.');
     }
 
+    const toNum = (v) => (v !== undefined && v !== "" && v !== null ? parseFloat(v) : null);
+    
+    const processedScores = {
+      st1: toNum(scores.st1), ws: toNum(scores.ws), mid_exam: toNum(scores.mid_exam), project: toNum(scores.project),
+      st2: toNum(scores.st2), home_class_work: toNum(scores.home_class_work), class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
+    };
+    
+    const total_score = Object.values(processedScores).reduce((acc, val) => acc + (val || 0), 0);
+
     return await prisma.marks.create({
       data: {
         enrollments_id: enrollmentId,
         subjects_id: subjectId,
-        st1: scores.st1 !== undefined && scores.st1 !== "" ? parseFloat(scores.st1) : null,
-        ws: scores.ws !== undefined && scores.ws !== "" ? parseFloat(scores.ws) : null,
-        mid_exam: scores.mid_exam !== undefined && scores.mid_exam !== "" ? parseFloat(scores.mid_exam) : null,
-        project: scores.project !== undefined && scores.project !== "" ? parseFloat(scores.project) : null,
-        st2: scores.st2 !== undefined && scores.st2 !== "" ? parseFloat(scores.st2) : null,
-        home_class_work: scores.home_class_work !== undefined && scores.home_class_work !== "" ? parseFloat(scores.home_class_work) : null,
-        class_activity: scores.class_activity !== undefined && scores.class_activity !== "" ? parseFloat(scores.class_activity) : null,
-        final_exam: scores.final_exam !== undefined && scores.final_exam !== "" ? parseFloat(scores.final_exam) : null
+        ...processedScores,
+        total_score
       }
     });
   }
@@ -154,11 +157,15 @@ class MarksService {
     const updateData = {};
     const allowedFields = Object.keys(MAX_WEIGHTS);
 
+    let total = 0;
     for (const key of allowedFields) {
       if (scores[key] !== undefined) {
         updateData[key] = (scores[key] === "" || scores[key] === null) ? null : parseFloat(scores[key]);
       }
+      const val = updateData[key] !== undefined ? updateData[key] : existing[key];
+      if (val) total += parseFloat(val);
     }
+    updateData.total_score = total;
 
     return await prisma.marks.update({
       where: { id: markId },

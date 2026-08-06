@@ -34,12 +34,22 @@ class TeacherMarksService {
       where: { teacher_id: teacher.id, is_active: true }
     });
 
+    const orConditions = assignments.length > 0 ? assignments.map(a => {
+      if (a.is_home_teacher) {
+        return {
+          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id }
+        };
+      } else {
+        return {
+          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id },
+          subjects_id: a.subject_id
+        };
+      }
+    }) : [{ id: -1 }];
+
     const marks = await prisma.marks.findMany({
       where: {
-        enrollments: {
-          sections_id: { in: assignments.map(a => a.section_id) },
-          academic_year_id: { in: assignments.map(a => a.academic_year_id) }
-        }
+        OR: orConditions
       },
       include: {
         subjects: true,
@@ -82,13 +92,22 @@ class TeacherMarksService {
     const sectionIds = assignments.map(a => a.section_id);
     const yearIds = assignments.map(a => a.academic_year_id);
 
+    const orConditions = assignments.length > 0 ? assignments.map(a => {
+      if (a.is_home_teacher) {
+        return {
+          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' }
+        };
+      } else {
+        return {
+          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' },
+          subjects_id: a.subject_id
+        };
+      }
+    }) : [{ id: -1 }];
+
     const marks = await prisma.marks.findMany({
       where: {
-        enrollments: {
-          sections_id: { in: sectionIds },
-          academic_year_id: { in: yearIds },
-          status: 'active'
-        }
+        OR: orConditions
       },
       include: {
         subjects: true,
@@ -119,13 +138,19 @@ class TeacherMarksService {
       }
       grouped[sid].subjects.push({
         mark_id: m.id,
+        subject_id: m.subjects_id,
         name: m.subjects?.name,
         st1: m.st1, ws: m.ws, mid_exam: m.mid_exam, project: m.project,
         st2: m.st2, home_class_work: m.home_class_work,
         class_activity: m.class_activity, final_exam: m.final_exam,
         total_score: m.total_score,
         term: m.enrollments?.terms?.term_name,
-        year: m.enrollments?.academic_year?.year_name
+        year: m.enrollments?.academic_year?.year_name,
+        is_editable: assignments.some(a => 
+          a.section_id === m.enrollments?.sections_id &&
+          a.academic_year_id === m.enrollments?.academic_year_id &&
+          a.subject_id === m.subjects_id
+        )
       });
     });
 
@@ -215,14 +240,21 @@ class TeacherMarksService {
 
     const toNum = (v) => (v !== undefined && v !== "" ? parseFloat(v) : null);
 
+    const processedScores = {
+      st1: toNum(scores.st1), ws: toNum(scores.ws),
+      mid_exam: toNum(scores.mid_exam), project: toNum(scores.project),
+      st2: toNum(scores.st2), home_class_work: toNum(scores.home_class_work),
+      class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
+    };
+
+    const total_score = Object.values(processedScores).reduce((acc, val) => acc + (val || 0), 0);
+
     return await prisma.marks.create({
       data: {
         enrollments_id: enrollmentId,
         subjects_id: subjectId,
-        st1: toNum(scores.st1), ws: toNum(scores.ws),
-        mid_exam: toNum(scores.mid_exam), project: toNum(scores.project),
-        st2: toNum(scores.st2), home_class_work: toNum(scores.home_class_work),
-        class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
+        ...processedScores,
+        total_score
       }
     });
   }
@@ -256,14 +288,24 @@ class TeacherMarksService {
 
     const toNum = (v) => (v !== undefined && v !== "" && v !== null ? parseFloat(v) : null);
 
+    const updateData = {
+      st1: toNum(scores.st1), ws: toNum(scores.ws),
+      mid_exam: toNum(scores.mid_exam), project: toNum(scores.project),
+      st2: toNum(scores.st2), home_class_work: toNum(scores.home_class_work),
+      class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
+    };
+
+    const allowedFields = Object.keys(MAX_WEIGHTS);
+    let total = 0;
+    for (const key of allowedFields) {
+      const val = updateData[key] !== undefined ? updateData[key] : mark[key];
+      if (val) total += parseFloat(val);
+    }
+    updateData.total_score = total;
+
     return await prisma.marks.update({
       where: { id },
-      data: {
-        st1: toNum(scores.st1), ws: toNum(scores.ws),
-        mid_exam: toNum(scores.mid_exam), project: toNum(scores.project),
-        st2: toNum(scores.st2), home_class_work: toNum(scores.home_class_work),
-        class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
-      }
+      data: updateData
     });
   }
 
@@ -277,13 +319,22 @@ class TeacherMarksService {
     const sectionIds = assignments.map(a => a.section_id);
     const yearIds = assignments.map(a => a.academic_year_id);
 
+    const orConditions = assignments.length > 0 ? assignments.map(a => {
+      if (a.is_home_teacher) {
+        return {
+          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' }
+        };
+      } else {
+        return {
+          enrollments: { sections_id: a.section_id, academic_year_id: a.academic_year_id, status: 'active' },
+          subjects_id: a.subject_id
+        };
+      }
+    }) : [{ id: -1 }];
+
     const marks = await prisma.marks.findMany({
       where: {
-        enrollments: {
-          sections_id: { in: sectionIds },
-          academic_year_id: { in: yearIds },
-          status: 'active'
-        }
+        OR: orConditions
       },
       include: {
         enrollments: {
