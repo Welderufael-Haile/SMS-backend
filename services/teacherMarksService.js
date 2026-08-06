@@ -253,16 +253,28 @@ class TeacherMarksService {
       class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
     };
 
-    // total_score is a generated column in MySQL, do not pass it in the insert/update
-    const newMark = await prisma.marks.create({
-      data: {
-        enrollments_id: enrollmentId,
-        subjects_id: subjectId,
-        ...processedScores
-      }
-    });
+    const total_score = Object.values(processedScores).reduce((acc, val) => acc + (val || 0), 0);
+    const isGenerated = await prisma.isTotalScoreGenerated();
 
-    return await prisma.marks.findUnique({ where: { id: newMark.id } });
+    if (isGenerated) {
+      const newMark = await prisma.marks.create({
+        data: {
+          enrollments_id: enrollmentId,
+          subjects_id: subjectId,
+          ...processedScores
+        }
+      });
+      return await prisma.marks.findUnique({ where: { id: newMark.id } });
+    } else {
+      return await prisma.marks.create({
+        data: {
+          enrollments_id: enrollmentId,
+          subjects_id: subjectId,
+          ...processedScores,
+          total_score
+        }
+      });
+    }
   }
 
   static async updateTeacherMark(userId, markId, scores) {
@@ -307,13 +319,20 @@ class TeacherMarksService {
       class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
     };
 
-    // total_score is a generated column in MySQL, do not pass it in the insert/update
+    const total_score = Object.values(updateData).reduce((acc, val) => acc + (val || 0), 0);
+    const isGenerated = await prisma.isTotalScoreGenerated();
 
-    await prisma.marks.update({
-      where: { id },
-      data: updateData
-    });
-
+    if (isGenerated) {
+      await prisma.marks.update({
+        where: { id },
+        data: updateData
+      });
+    } else {
+      await prisma.marks.update({
+        where: { id },
+        data: { ...updateData, total_score }
+      });
+    }
     return await prisma.marks.findUnique({ where: { id } });
   }
 

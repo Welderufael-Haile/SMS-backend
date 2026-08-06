@@ -122,13 +122,27 @@ class MarksService {
       st2: toNum(scores.st2), home_class_work: toNum(scores.home_class_work), class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
     };
     
-    return await prisma.marks.create({
-      data: {
-        enrollments_id: enrollmentId,
-        subjects_id: subjectId,
-        ...processedScores
-      }
-    });
+    const total_score = Object.values(processedScores).reduce((acc, val) => acc + (val || 0), 0);
+    const isGenerated = await prisma.isTotalScoreGenerated();
+    
+    if (isGenerated) {
+      return await prisma.marks.create({
+        data: {
+          enrollments_id: enrollmentId,
+          subjects_id: subjectId,
+          ...processedScores
+        }
+      });
+    } else {
+      return await prisma.marks.create({
+        data: {
+          enrollments_id: enrollmentId,
+          subjects_id: subjectId,
+          ...processedScores,
+          total_score
+        }
+      });
+    }
   }
 
   static async updateMark(id, scores) {
@@ -154,16 +168,28 @@ class MarksService {
     const updateData = {};
     const allowedFields = Object.keys(MAX_WEIGHTS);
 
+    let total = 0;
     for (const key of allowedFields) {
       if (scores[key] !== undefined) {
         updateData[key] = (scores[key] === "" || scores[key] === null) ? null : parseFloat(scores[key]);
       }
+      const val = updateData[key] !== undefined ? updateData[key] : existing[key];
+      if (val) total += parseFloat(val);
     }
+    
+    const isGenerated = await prisma.isTotalScoreGenerated();
 
-    return await prisma.marks.update({
-      where: { id: markId },
-      data: updateData
-    });
+    if (isGenerated) {
+      return await prisma.marks.update({
+        where: { id: markId },
+        data: updateData
+      });
+    } else {
+      return await prisma.marks.update({
+        where: { id: markId },
+        data: { ...updateData, total_score: total }
+      });
+    }
   }
 
   static async deleteMark(id) {
