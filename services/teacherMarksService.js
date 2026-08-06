@@ -238,7 +238,13 @@ class TeacherMarksService {
 
     if (existing) throw new BadRequestError("Mark already exists for this student and subject.");
 
-    const toNum = (v) => (v !== undefined && v !== "" ? parseFloat(v) : null);
+    const toNum = (v) => {
+      if (v !== undefined && v !== "" && v !== null) {
+        const num = parseFloat(v);
+        return isNaN(num) ? null : parseFloat(num.toFixed(2));
+      }
+      return null;
+    };
 
     const processedScores = {
       st1: toNum(scores.st1), ws: toNum(scores.ws),
@@ -247,14 +253,12 @@ class TeacherMarksService {
       class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
     };
 
-    const total_score = Object.values(processedScores).reduce((acc, val) => acc + (val || 0), 0);
-
+    // total_score is a generated column in MySQL, do not pass it in the insert/update
     return await prisma.marks.create({
       data: {
         enrollments_id: enrollmentId,
         subjects_id: subjectId,
-        ...processedScores,
-        total_score
+        ...processedScores
       }
     });
   }
@@ -286,7 +290,13 @@ class TeacherMarksService {
     const errors = validateScores(scores);
     if (errors.length > 0) throw new BadRequestError(errors.join(", "));
 
-    const toNum = (v) => (v !== undefined && v !== "" && v !== null ? parseFloat(v) : null);
+    const toNum = (v) => {
+      if (v !== undefined && v !== "" && v !== null) {
+        const num = parseFloat(v);
+        return isNaN(num) ? null : parseFloat(num.toFixed(2));
+      }
+      return null;
+    };
 
     const updateData = {
       st1: toNum(scores.st1), ws: toNum(scores.ws),
@@ -295,13 +305,7 @@ class TeacherMarksService {
       class_activity: toNum(scores.class_activity), final_exam: toNum(scores.final_exam)
     };
 
-    const allowedFields = Object.keys(MAX_WEIGHTS);
-    let total = 0;
-    for (const key of allowedFields) {
-      const val = updateData[key] !== undefined ? updateData[key] : mark[key];
-      if (val) total += parseFloat(val);
-    }
-    updateData.total_score = total;
+    // total_score is a generated column in MySQL, do not pass it in the insert/update
 
     return await prisma.marks.update({
       where: { id },
