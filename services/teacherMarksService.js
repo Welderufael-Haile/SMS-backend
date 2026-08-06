@@ -254,13 +254,15 @@ class TeacherMarksService {
     };
 
     // total_score is a generated column in MySQL, do not pass it in the insert/update
-    return await prisma.marks.create({
+    const newMark = await prisma.marks.create({
       data: {
         enrollments_id: enrollmentId,
         subjects_id: subjectId,
         ...processedScores
       }
     });
+
+    return await prisma.marks.findUnique({ where: { id: newMark.id } });
   }
 
   static async updateTeacherMark(userId, markId, scores) {
@@ -307,10 +309,12 @@ class TeacherMarksService {
 
     // total_score is a generated column in MySQL, do not pass it in the insert/update
 
-    return await prisma.marks.update({
+    await prisma.marks.update({
       where: { id },
       data: updateData
     });
+
+    return await prisma.marks.findUnique({ where: { id } });
   }
 
   static async getTeacherStats(userId) {
