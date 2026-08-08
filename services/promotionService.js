@@ -30,7 +30,7 @@ class PromotionService {
     const activeEnrollments = await prisma.enrollments.findMany({
       where: {
         academic_year_id: yearId,
-        status: 'active',
+        status: { in: ['active', 'completed'] },
         ...(secId ? { sections_id: secId } : {})
       },
       include: {
@@ -142,7 +142,7 @@ class PromotionService {
       const activeEnrollments = await tx.enrollments.findMany({
         where: {
           academic_year_id: yearId,
-          status: 'active',
+          status: { in: ['active', 'completed'] },
           ...(secId ? { sections_id: secId } : {})
         },
         include: {
@@ -280,7 +280,7 @@ class PromotionService {
 
     const yearId = parseInt(academic_year_id, 10);
     const totalStudents = await prisma.enrollments.count({
-      where: { academic_year_id: yearId, status: 'active' }
+      where: { academic_year_id: yearId, status: { in: ['active', 'completed'] } }
     });
 
     return {
