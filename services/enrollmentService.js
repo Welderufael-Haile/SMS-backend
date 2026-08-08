@@ -233,31 +233,40 @@ class EnrollmentService {
         }
       });
 
-      let enrolledCount = 0;
-      for (const item of completed) {
-        const exists = await tx.enrollments.findFirst({
-          where: {
-            student_id: item.student_id,
-            academic_year_id: nextYearId,
-            terms_id: nextTermId
-          }
-        });
+      if (completed.length === 0) return { enrolled: 0 };
 
-        if (!exists) {
-          await tx.enrollments.create({
-            data: {
-              student_id: item.student_id,
-              academic_year_id: nextYearId,
-              terms_id: nextTermId,
-              sections_id: item.sections_id,
-              status: 'active'
-            }
-          });
-          enrolledCount++;
-        }
+      const studentIds = completed.map(c => c.student_id);
+      
+      const existingInNextTerm = await tx.enrollments.findMany({
+        where: {
+          academic_year_id: nextYearId,
+          terms_id: nextTermId,
+          student_id: { in: studentIds }
+        },
+        select: { student_id: true }
+      });
+      
+      const existingStudentIds = new Set(existingInNextTerm.map(e => e.student_id));
+
+      const toCreate = completed
+        .filter(item => !existingStudentIds.has(item.student_id))
+        .map(item => ({
+          student_id: item.student_id,
+          academic_year_id: nextYearId,
+          terms_id: nextTermId,
+          sections_id: item.sections_id,
+          status: 'active'
+        }));
+
+      if (toCreate.length > 0) {
+        await tx.enrollments.createMany({
+          data: toCreate
+        });
       }
 
-      return { enrolled: enrolledCount };
+      return { enrolled: toCreate.length };
+    }, {
+      timeout: 30000
     });
   }
 
