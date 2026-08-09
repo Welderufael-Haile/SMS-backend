@@ -158,6 +158,10 @@ class PromotionService {
         studentMap.get(sId).enrollments.push(e);
       });
 
+      const newEnrollments = [];
+      const newGraduations = [];
+      const enrollmentUpdates = [];
+
       let promotedCount = 0;
       let repeatedCount = 0;
       let completedCount = 0;
@@ -178,14 +182,12 @@ class PromotionService {
           decisionNote = `Grade 12 completed - awaiting national exam (Avg: ${yearlyAvg.toFixed(2)}%)`;
           completedCount++;
 
-          await tx.graduation_records.create({
-            data: {
-              student_id: studentId,
-              graduation_date: new Date(),
-              final_average: yearlyAvg,
-              academic_year_id: yearId,
-              terms_completed: enrollments.length
-            }
+          newGraduations.push({
+            student_id: studentId,
+            graduation_date: new Date(),
+            final_average: yearlyAvg,
+            academic_year_id: yearId,
+            terms_completed: enrollments.length
           });
         } else {
           const PASSING_GRADE = parseFloat(process.env.PASSING_GRADE) || 50;
@@ -213,27 +215,26 @@ class PromotionService {
           }
 
           if (targetSectionId) {
-            await tx.enrollments.create({
-              data: {
-                student_id: studentId,
-                academic_year_id: nextYearId,
-                terms_id: nextTermId,
-                sections_id: targetSectionId,
-                status: 'active',
-                promotion_note: `From grade ${section.grade_level}: ${finalStatus}`
-              }
+            newEnrollments.push({
+              student_id: studentId,
+              academic_year_id: nextYearId,
+              terms_id: nextTermId,
+              sections_id: targetSectionId,
+              status: 'active',
+              promotion_note: `From grade ${section.grade_level}: ${finalStatus}`
             });
           }
         }
 
-        // Update active enrollments
+        // Prepare updates for active enrollments
+        const completedAt = new Date();
         for (const e of enrollments) {
-          await tx.enrollments.update({
-            where: { id: e.id },
+          enrollmentUpdates.push({
+            id: e.id,
             data: {
               status: finalStatus,
               final_average: yearlyAvg,
-              completed_at: new Date(),
+              completed_at: completedAt,
               promotion_note: decisionNote
             }
           });
@@ -249,6 +250,29 @@ class PromotionService {
         });
       }
 
+      // Execute Bulk Operations
+      if (newGraduations.length > 0) {
+        await tx.graduation_records.createMany({ data: newGraduations });
+      }
+      
+      if (newEnrollments.length > 0) {
+        await tx.enrollments.createMany({ data: newEnrollments });
+      }
+
+      // Chunk updates to prevent transaction timeouts or memory issues
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < enrollmentUpdates.length; i += CHUNK_SIZE) {
+        const chunk = enrollmentUpdates.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map(update => 
+            tx.enrollments.update({
+              where: { id: update.id },
+              data: update.data
+            })
+          )
+        );
+      }
+
       return {
         stats: {
           total: studentMap.size,
@@ -258,6 +282,8 @@ class PromotionService {
         },
         details
       };
+    }, {
+      timeout: 60000 // Give the transaction 60 seconds to process bulk updates
     });
   }
 
