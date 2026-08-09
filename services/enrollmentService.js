@@ -87,6 +87,10 @@ class EnrollmentService {
     const termId = parseInt(terms_id, 10);
     const sectionId = parseInt(sections_id, 10);
 
+    if (isNaN(studentId) || isNaN(yearId) || isNaN(termId) || isNaN(sectionId)) {
+      throw new BadRequestError("Missing required fields for enrollment: student, academic year, term, and section are all required.");
+    }
+
     const existing = await prisma.enrollments.findFirst({
       where: {
         student_id: studentId,
@@ -114,14 +118,23 @@ class EnrollmentService {
     const enrollmentId = parseInt(id, 10);
     const { student_id, academic_year_id, terms_id, sections_id } = data;
 
+    const parsedStudentId = parseInt(student_id, 10);
+    const parsedYearId = parseInt(academic_year_id, 10);
+    const parsedTermId = parseInt(terms_id, 10);
+    const parsedSectionId = parseInt(sections_id, 10);
+
+    if (isNaN(parsedStudentId) || isNaN(parsedYearId) || isNaN(parsedTermId) || isNaN(parsedSectionId)) {
+      throw new BadRequestError("Missing required fields for update: student, academic year, term, and section are all required.");
+    }
+
     try {
       return await prisma.enrollments.update({
         where: { id: enrollmentId },
         data: {
-          student_id: parseInt(student_id, 10),
-          academic_year_id: parseInt(academic_year_id, 10),
-          terms_id: parseInt(terms_id, 10),
-          sections_id: parseInt(sections_id, 10)
+          student_id: parsedStudentId,
+          academic_year_id: parsedYearId,
+          terms_id: parsedTermId,
+          sections_id: parsedSectionId
         }
       });
     } catch (err) {
