@@ -11,26 +11,13 @@ class PromotionService {
     const yearId = parseInt(academic_year_id, 10);
     const secId = section_id ? parseInt(section_id, 10) : null;
 
-    const alreadyProcessedCount = await prisma.enrollments.count({
-      where: {
-        academic_year_id: yearId,
-        status: { in: ['promoted', 'repeated'] },
-        ...(secId ? { sections_id: secId } : {})
-      }
-    });
-
-    if (alreadyProcessedCount > 0) {
-      throw new BadRequestError(
-        secId 
-          ? "Some students in this section have already been promoted/repeated for this academic year."
-          : "Some students have already been promoted/repeated for this academic year."
-      );
-    }
+    // We skip already processed students by filtering for promotion_note: null
 
     const activeEnrollments = await prisma.enrollments.findMany({
       where: {
         academic_year_id: yearId,
         status: { in: ['active', 'completed'] },
+        promotion_note: null,
         ...(secId ? { sections_id: secId } : {})
       },
       include: {
@@ -143,6 +130,7 @@ class PromotionService {
         where: {
           academic_year_id: yearId,
           status: { in: ['active', 'completed'] },
+          promotion_note: null,
           ...(secId ? { sections_id: secId } : {})
         },
         include: {
@@ -279,13 +267,35 @@ class PromotionService {
     }
 
     const yearId = parseInt(academic_year_id, 10);
-    const totalStudents = await prisma.enrollments.count({
-      where: { academic_year_id: yearId, status: { in: ['active', 'completed'] } }
+    const activeEnrollments = await prisma.enrollments.findMany({
+      where: { academic_year_id: yearId, status: { in: ['active', 'completed'] }, promotion_note: null },
+      distinct: ['student_id']
+    });
+    
+    const alreadyProcessed = await prisma.enrollments.findMany({
+      where: { academic_year_id: yearId, promotion_note: { not: null } },
+      distinct: ['student_id'],
+      select: { status: true }
+    });
+    
+    let promoted = 0;
+    let repeated = 0;
+    let completed = 0;
+    alreadyProcessed.forEach(e => {
+        if (e.status === 'promoted') promoted++;
+        else if (e.status === 'repeated') repeated++;
+        else if (e.status === 'completed') completed++;
     });
 
     return {
-      total: totalStudents,
-      can_proceed: totalStudents > 0
+      total: activeEnrollments.length + alreadyProcessed.length,
+      eligible_for_promotion: activeEnrollments.length,
+      can_proceed: activeEnrollments.length > 0,
+      already_processed: {
+          promoted,
+          repeated,
+          completed
+      }
     };
   }
 }
