@@ -5,6 +5,10 @@ const router = express.Router();
 const studentController = require("../controllers/addStudentController");
 const multer = require("multer");
 const path = require("path");
+const { verifyToken, requireRole } = require('../middleware/authMiddleware');
+
+router.use(verifyToken);
+router.use(requireRole(['admin', 'registrar']));
 
 // Configure Multer storage
 const storage = multer.diskStorage({

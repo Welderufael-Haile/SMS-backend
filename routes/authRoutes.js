@@ -35,6 +35,14 @@ router.post(
 
 router.post('/logout', auth.logout);
 
+// --- User Profile Update ---
+router.put(
+  '/profile',
+  verifyToken,
+  sanitizeInput,
+  auth.updateMyProfile
+);
+
 
 // --- Admin-Only Management (CRUD) ---
 
@@ -70,12 +78,12 @@ router.delete(
 );
 
 
-// Admin Dashboard Access
+// Dashboard Access
 router.get(
-  '/admin',
+  '/dashboard',
   verifyToken,
-  requireRole(['admin']),
-  auth.getActiveProfile('admin')
+  requireRole(['admin', 'registrar', 'headdepartment', 'cashier', 'accountant']),
+  auth.getActiveProfile()
 );
 
 // Teacher Dashboard Access
@@ -83,15 +91,15 @@ router.get(
   '/teachers',
   verifyToken,
   requireRole(['teacher']),
-  auth.getActiveProfile('teacher')
+  auth.getActiveProfile()
 );
 
 // Student Dashboard Access
 router.get(
   '/students',
   verifyToken,
-  requireRole(['student']),
-  auth.getActiveProfile('student')
+  requireRole(['student', 'parent']),
+  auth.getActiveProfile()
 );
 
 module.exports = router;

@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const enrollmentController = require('../controllers/enrollmentController');
+const { verifyToken, requireRole } = require('../middleware/authMiddleware');
+
+// Protect all enrollment routes
+router.use(verifyToken);
+router.use(requireRole(['admin', 'registrar']));
 
 router.get('/dropdowns', enrollmentController.getDropdowns);
 router.get('/export', enrollmentController.exportToExcel);

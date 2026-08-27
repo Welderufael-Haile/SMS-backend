@@ -1,12 +1,40 @@
 const prisma = require('../config/prisma');
-const { NotFoundError, UnauthorizedError, BadRequestError } = require('../utils/errors');
+const { NotFoundError, UnauthorizedError, BadRequestError, ForbiddenError } = require('../utils/errors');
 
 class StudentService {
-  static async getStudentByUserId(userId) {
-    if (!userId) throw new UnauthorizedError("Unauthorized");
+  static async getStudentByUserId(user, query = {}) {
+    if (!user || !user.id) throw new UnauthorizedError("Unauthorized");
     
+    // If role is parent, find the student linked to this parent
+    if (user.role === 'parent') {
+      const parentUser = await prisma.users.findUnique({ where: { id: parseInt(user.id, 10) } });
+      if (!parentUser || !parentUser.email) throw new NotFoundError("Parent user or email not found.");
+      
+      const parentRecord = await prisma.parents.findFirst({
+        where: { Email: parentUser.email }
+      });
+      if (!parentRecord) throw new NotFoundError("Parent record not found in parents table.");
+      
+      const students = await prisma.student.findMany({
+        where: { parents_id: parentRecord.id },
+        include: { Users: { select: { email: true, full_name: true } } }
+      });
+      
+      if (students.length === 0) throw new NotFoundError("No child found for this parent.");
+      
+      // If a specific student_id is requested, find it among the parent's children
+      if (query.student_id) {
+        const target = students.find(s => s.id === parseInt(query.student_id, 10));
+        if (target) return target;
+        throw new ForbiddenError("You do not have access to this student.");
+      }
+      
+      return students[0];
+    }
+    
+    // Otherwise, assume it's a student role
     const student = await prisma.student.findUnique({
-      where: { user_id: parseInt(userId, 10) },
+      where: { user_id: parseInt(user.id, 10) },
       include: {
         Users: {
           select: { email: true, full_name: true }
@@ -15,29 +43,29 @@ class StudentService {
     });
 
     if (!student) {
-      const user = await prisma.users.findUnique({
-        where: { id: parseInt(userId, 10) }
+      const dbUser = await prisma.users.findUnique({
+        where: { id: parseInt(user.id, 10) }
       });
 
-      if (!user) {
+      if (!dbUser) {
         throw new NotFoundError("User account not found.");
       }
 
       return {
-        id: user.id,
-        full_name: user.full_name,
+        id: dbUser.id,
+        full_name: dbUser.full_name,
         Sex: null,
         Date_of_birth: null,
         profile_photo: null,
-        Users: { email: user.email },
+        Users: { email: dbUser.email },
         isVirtual: true
       };
     }
     return student;
   }
 
-  static async getStudentDashboard(userId, query) {
-    const student = await this.getStudentByUserId(userId);
+  static async getStudentDashboard(user, query) {
+    const student = await this.getStudentByUserId(user, query);
 
     // Active enrollment
     const activeEnrollment = await prisma.enrollments.findFirst({
@@ -141,8 +169,8 @@ class StudentService {
     };
   }
 
-  static async getStudentMarks(userId, query) {
-    const student = await this.getStudentByUserId(userId);
+  static async getStudentMarks(user, query) {
+    const student = await this.getStudentByUserId(user, query);
     const { year_id, term_id, page = 1, limit = 10 } = query;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -221,8 +249,8 @@ class StudentService {
     };
   }
 
-  static async getStudentFilters(userId, query) {
-    const student = await this.getStudentByUserId(userId);
+  static async getStudentFilters(user, query) {
+    const student = await this.getStudentByUserId(user, query);
 
     const yearPage = Math.max(1, parseInt(query.year_page, 10) || 1);
     const yearLimit = Math.min(100, Math.max(1, parseInt(query.year_limit, 10) || 20));
@@ -268,8 +296,8 @@ class StudentService {
     };
   }
 
-  static async getStudentReportCard(userId, yearId, termId) {
-    const student = await this.getStudentByUserId(userId);
+  static async getStudentReportCard(user, yearId, termId) {
+    const student = await this.getStudentByUserId(user, {});
 
     if (!yearId || !termId) {
       throw new BadRequestError("Year ID and Term ID are required");

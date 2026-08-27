@@ -5,7 +5,7 @@ const studentAttendanceController = require('../controllers/studentAttendanceCon
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 
 // All student attendance routes require authentication and student role
-router.use(verifyToken, requireRole(['student']));
+router.use(verifyToken, requireRole(['student', 'parent']));
 
 // Get current attendance (active term)
 router.get('/current', studentAttendanceController.getStudentAttendance);

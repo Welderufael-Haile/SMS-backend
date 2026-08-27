@@ -59,6 +59,15 @@ exports.logout = (req, res) => {
   res.json({ message: 'Logged out successfully' });
 };
 
+exports.updateMyProfile = async (req, res, next) => {
+  try {
+    const result = await AuthService.updateMyProfile(req.user.id, req.body);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getActiveProfile = (expectedRole) => async (req, res, next) => {
   try {
     const user = await AuthService.getActiveProfile(req.user.id, expectedRole);

@@ -3,19 +3,49 @@ const fs = require('fs');
 const path = require('path');
 
 const getChatUsers = async (currentUserId) => {
-  return await prisma.users.findMany({
-    where: {
-      id: { not: currentUserId },
-      status: 'active',
-    },
+  // 1. Fetch all users
+  const users = await prisma.users.findMany({
+    where: { id: { not: currentUserId } },
     select: {
       id: true,
       full_name: true,
       role: true,
       last_login: true,
     },
-    orderBy: { full_name: 'asc' },
   });
+
+  // 2. Fetch latest messages involving the current user
+  const latestMessages = await prisma.messages.findMany({
+    where: {
+      OR: [
+        { senderId: currentUserId },
+        { receiverId: currentUserId },
+      ],
+      isDeleted: false,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // 3. Track the most recent interaction time for each user
+  const lastMessageMap = {};
+  for (const msg of latestMessages) {
+    const otherUserId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
+    if (!lastMessageMap[otherUserId]) {
+      lastMessageMap[otherUserId] = new Date(msg.createdAt).getTime();
+    }
+  }
+
+  // 4. Sort: Recent chats first, then alphabetically
+  users.sort((a, b) => {
+    const timeA = lastMessageMap[a.id] || 0;
+    const timeB = lastMessageMap[b.id] || 0;
+    if (timeA !== timeB) {
+      return timeB - timeA; // Newest first
+    }
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+
+  return users;
 };
 
 const getMessages = async (currentUserId, receiverId, skip, limit) => {

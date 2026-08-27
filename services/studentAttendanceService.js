@@ -1,11 +1,10 @@
 const prisma = require('../config/prisma');
 const { NotFoundError } = require('../utils/errors');
+const StudentService = require('./studentService');
 
 class StudentAttendanceService {
-  static async getStudentAttendance(userId) {
-    const student = await prisma.student.findFirst({
-      where: { user_id: parseInt(userId, 10) }
-    });
+  static async getStudentAttendance(user) {
+    const student = await StudentService.getStudentByUserId(user);
 
     if (!student) throw new NotFoundError("Student not found");
 
@@ -43,10 +42,8 @@ class StudentAttendanceService {
     };
   }
 
-  static async getAttendanceByTerm(userId, termId) {
-    const student = await prisma.student.findFirst({
-      where: { user_id: parseInt(userId, 10) }
-    });
+  static async getAttendanceByTerm(user, termId) {
+    const student = await StudentService.getStudentByUserId(user);
 
     if (!student) throw new NotFoundError("Student not found");
 

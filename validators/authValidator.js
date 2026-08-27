@@ -30,7 +30,6 @@ exports.registerSchema = Joi.object({
     .required(),
 
   role: Joi.string()
-    .valid("admin", "teacher", "student")
     .required(),
 
   status: Joi.string()

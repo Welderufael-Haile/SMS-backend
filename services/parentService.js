@@ -1,5 +1,35 @@
 const prisma = require('../config/prisma');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
+const bcrypt = require('bcryptjs');
+
+const generateSecurePassword = () => {
+  const length = 10;
+  const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+};
+
+const generateParentEmail = async (fullName) => {
+  const nameParts = fullName.toLowerCase().trim().split(' ');
+  const firstName = nameParts[0].replace(/[^a-z]/g, '');
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1].replace(/[^a-z]/g, '') : '';
+  
+  let baseEmail = lastName ? `${firstName}.${lastName}` : firstName;
+  let email = `${baseEmail}@parent.com`;
+  let counter = 1;
+  
+  while (true) {
+    const existing = await prisma.users.findUnique({ where: { email } });
+    if (!existing) break;
+    email = `${baseEmail}${counter}@parent.com`;
+    counter++;
+  }
+  return email;
+};
 
 class ParentService {
   static async getAllParents() {
@@ -46,15 +76,43 @@ class ParentService {
       }
     }
 
-    return await prisma.parents.create({
-      data: {
-        First_Name,
-        Last_Name,
-        Sex,
-        Phone_Number,
-        Email,
-        Address
-      }
+    const finalEmail = Email ? Email.trim() : await generateParentEmail(`${First_Name} ${Last_Name}`);
+    
+    // Check if the email already exists in Users
+    const existingUser = await prisma.users.findFirst({ where: { email: finalEmail } });
+    if (existingUser) {
+      throw new BadRequestError('Email is already associated with an existing user account');
+    }
+
+    const defaultPassword = generateSecurePassword();
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    return await prisma.$transaction(async (tx) => {
+      const user = await tx.users.create({
+        data: {
+          full_name: `${First_Name} ${Last_Name}`,
+          email: finalEmail,
+          password: hashedPassword,
+          role: 'parent',
+          status: 'active'
+        }
+      });
+
+      const parent = await tx.parents.create({
+        data: {
+          First_Name,
+          Last_Name,
+          Sex,
+          Phone_Number,
+          Email: finalEmail,
+          Address
+        }
+      });
+
+      return {
+        parent,
+        credentials: { email: finalEmail, password: defaultPassword }
+      };
     });
   }
 

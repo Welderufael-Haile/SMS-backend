@@ -212,7 +212,7 @@ app.use(compression());
 // Prevent brute-force attacks
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 2000,
   message: "Too many requests from this IP. Please try again later.",
 });
 
@@ -267,6 +267,8 @@ async function startServer() {
     app.use("/api/subjects", subjectsRoutes);
     //routes for sections
     app.use("/api/sections", sectionsRoutes);
+    // routes for student attendance history and summary
+    app.use("/api/student/attendance", studentAttendance);
     // routes for addstudents form
     app.use("/api/student", addStudentRoutes);
     // routes for students dashboard and view marks pages
@@ -307,8 +309,7 @@ async function startServer() {
     app.use("/api/roles", roleRoutes);
     // routes for teacher attendance marking and summary
     app.use("/api/teacher-attendance", attendanceRoutes);
-    // routes for student attendance history and summary
-    app.use("/api/student/attendance", studentAttendance);
+
     // routes for admin attendance dashboard and report export
     app.use('/api/admin/attendance', adminAttendanceRoutes);
     // routes for chat messages

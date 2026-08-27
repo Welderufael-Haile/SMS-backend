@@ -4,8 +4,8 @@ const router = express.Router();
 const studentController = require('../controllers/studentController');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 
-// All student routes require authentication and student role
-router.use(verifyToken, requireRole(['student']));
+// All student routes require authentication and student or parent role
+router.use(verifyToken, requireRole(['student', 'parent']));
 
 // Dashboard
 router.get('/dashboard', studentController.getStudentDashboard);

@@ -151,6 +151,52 @@ class AuthService {
     }
   }
 
+  static async updateMyProfile(id, data) {
+    const userId = parseInt(id, 10);
+    const { email, password, currentPassword } = data;
+
+    const user = await prisma.users.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError("User not found.");
+
+    const updateData = {};
+
+    // Update Email
+    if (email && email.trim() !== "" && email !== user.email) {
+      const existing = await prisma.users.findFirst({
+        where: { email, NOT: { id: userId } }
+      });
+      if (existing) throw new BadRequestError("Email already in use.");
+      updateData.email = email;
+    }
+
+    // Update Password
+    if (password && password.trim() !== "") {
+      if (!currentPassword) {
+        throw new BadRequestError("Current password is required to change your password.");
+      }
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) {
+        throw new BadRequestError("Current password is incorrect.");
+      }
+      if (!passwordRegex.test(password)) {
+        throw new BadRequestError("New password is too weak. Must be at least 8 characters, with letters and numbers.");
+      }
+      updateData.password = await bcrypt.hash(password, 12);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return { message: "No changes made", user: { id: user.id, email: user.email, full_name: user.full_name } };
+    }
+
+    const updatedUser = await prisma.users.update({
+      where: { id: userId },
+      data: updateData,
+      select: { id: true, full_name: true, email: true, role: true }
+    });
+
+    return { message: "Profile updated successfully", user: updatedUser };
+  }
+
   static async deleteUser(id, adminId) {
     const userId = parseInt(id, 10);
 

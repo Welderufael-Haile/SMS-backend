@@ -20,8 +20,12 @@ exports.getParentById = async (req, res, next) => {
 
 exports.addParent = async (req, res, next) => {
   try {
-    const newParent = await ParentService.addParent(req.body);
-    res.status(201).json({ message: 'Parent added successfully', id: newParent.id });
+    const result = await ParentService.addParent(req.body);
+    res.status(201).json({ 
+      message: 'Parent added successfully', 
+      id: result.parent.id,
+      credentials: result.credentials
+    });
   } catch (error) {
     next(error);
   }
