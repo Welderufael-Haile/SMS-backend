@@ -240,10 +240,12 @@ model teacher_section_subjects {
   section_id       Int
   subject_id       Int
   academic_year_id Int
+  periods_per_week Int?          @default(3)
   is_active        Boolean?      @default(true)
   is_home_teacher  Boolean?      @default(false)
   created_at       DateTime?     @default(now()) @db.Timestamp(0)
   updated_at       DateTime?     @default(now()) @db.Timestamp(0)
+  timetables       timetable[]
   sections         sections      @relation(fields: [section_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_section")
   subjects         subjects      @relation(fields: [subject_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_subject")
   teachers         teachers      @relation(fields: [teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tss_teacher")
@@ -381,4 +383,34 @@ model messages {
 
   @@index([senderId], map: "idx_sender")
   @@index([receiverId], map: "idx_receiver")
+}
+
+model timetable {
+  id                           Int                       @id @default(autoincrement())
+  teacher_section_subject_id   Int
+  day_of_week                  String                    @db.VarChar(20)
+  start_time                   String                    @db.VarChar(10)
+  end_time                     String                    @db.VarChar(10)
+  created_at                   DateTime?                 @default(now()) @db.Timestamp(0)
+  updated_at                   DateTime?                 @updatedAt @db.Timestamp(0)
+
+  teacher_section_subjects     teacher_section_subjects  @relation(fields: [teacher_section_subject_id], references: [id], onDelete: Cascade)
+
+  @@index([teacher_section_subject_id], map: "idx_timetable_tss")
+}
+
+model school_days {
+  id         Int       @id @default(autoincrement())
+  day_name   String    @unique @db.VarChar(20)
+  is_active  Boolean   @default(true)
+  order_idx  Int       @default(0)
+}
+
+model school_periods {
+  id         Int       @id @default(autoincrement())
+  start_time String    @db.VarChar(10)
+  end_time   String    @db.VarChar(10)
+  label      String    @db.VarChar(50)
+  is_break   Boolean   @default(false)
+  order_idx  Int       @default(0)
 }

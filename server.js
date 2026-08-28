@@ -40,6 +40,7 @@ const attendanceRoutes = require("./routes/teacherAttendanceRoutes"); // routes 
 const studentAttendance = require("./routes/studentAttendanceRoutes"); // routes for student attendance history and summary
 const adminAttendanceRoutes = require("./routes/adminAttendanceRoutes"); // routes for admin attendance dashboard and report export
 const messageRoutes = require("./routes/messageRoutes"); // routes for chat messages
+const timetableRoutes = require('./routes/timetableRoutes');
 const app = express();
 
 // Trust proxy headers when running behind Render or other reverse proxies.
@@ -289,6 +290,8 @@ async function startServer() {
 
     //routes for rasults
     app.use('/api/results', resultRoutes);
+    // routes for timetable
+    app.use('/api/timetable', timetableRoutes);
     // routes for job applicants
     app.use('/api/applicants', applicantsRoutes);
 

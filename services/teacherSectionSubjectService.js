@@ -12,6 +12,7 @@ class TeacherSectionSubjectService {
     const section_id = toNum(data.section_id);
     const subject_id = toNum(data.subject_id);
     const academic_year_id = toNum(data.academic_year_id);
+    const periods_per_week = toNum(data.periods_per_week) || 3;
     const is_home_teacher = data.is_home_teacher === true;
 
     if (!teacher_id || !section_id || !subject_id || !academic_year_id) {
@@ -47,7 +48,7 @@ class TeacherSectionSubjectService {
     });
 
     return await prisma.teacher_section_subjects.create({
-      data: { teacher_id, section_id, subject_id, academic_year_id, is_home_teacher }
+      data: { teacher_id, section_id, subject_id, academic_year_id, periods_per_week, is_home_teacher }
     });
   }
 
@@ -72,6 +73,7 @@ class TeacherSectionSubjectService {
       subject: a.subjects?.name,
       academic_year_id: a.academic_year_id,
       academic_year: a.academic_year?.year_name,
+      periods_per_week: a.periods_per_week,
       is_active: a.is_active,
       is_home_teacher: a.is_home_teacher
     }));
@@ -98,6 +100,7 @@ class TeacherSectionSubjectService {
       subject: a.subjects?.name,
       academic_year_id: a.academic_year_id,
       academic_year: a.academic_year?.year_name,
+      periods_per_week: a.periods_per_week,
       is_active: a.is_active,
       is_home_teacher: a.is_home_teacher
     };
@@ -109,6 +112,7 @@ class TeacherSectionSubjectService {
     const section_id = toNum(data.section_id);
     const subject_id = toNum(data.subject_id);
     const academic_year_id = toNum(data.academic_year_id);
+    const periods_per_week = toNum(data.periods_per_week) || 3;
     const is_home_teacher = data.is_home_teacher === true;
 
     if (!assignmentId || !teacher_id || !section_id || !subject_id || !academic_year_id) {
@@ -136,7 +140,7 @@ class TeacherSectionSubjectService {
     try {
       return await prisma.teacher_section_subjects.update({
         where: { id: assignmentId },
-        data: { teacher_id, section_id, subject_id, academic_year_id, is_home_teacher, is_active: true }
+        data: { teacher_id, section_id, subject_id, academic_year_id, periods_per_week, is_home_teacher, is_active: true }
       });
     } catch (err) {
       if (err.code === 'P2025') throw new NotFoundError("Assignment not found");
